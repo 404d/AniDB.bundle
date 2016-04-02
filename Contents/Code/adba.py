@@ -14,36 +14,50 @@
 # along with aDBa.  If not, see <http://www.gnu.org/licenses/>.
 import threading
 from time import time, sleep, strftime, localtime
-from types import *
+import types
 from aniDBlink import AniDBLink
-from aniDBcommands import *
-from aniDBerrors import *
-from aniDBAbstracter import Anime, AnimeDesc, Episode, File
+import aniDBcommands as _cmd
+import aniDBerrors as _err
+from aniDBerrors import AniDBCommandTimeoutError
+
+adb = object()
+adb.cmd = _cmd
+adb.err = _err
 
 version = 100
 
+
 class Connection(threading.Thread):
-    def __init__(self, clientname='adba', server='api.anidb.info', port=9000, myport=9876, user=None, password=None, session=None, log=False, logPrivate=False, keepAlive=False):
+    def __init__(self, clientname='adba', server='api.anidb.info', port=9000,
+                 myport=9876, user=None, password=None, session=None,
+                 log=False, logPrivate=False, keepAlive=False):
         threading.Thread.__init__(self)
         # setting the log function
         self.logPrivate = logPrivate
-        if isinstance(log, FunctionType) or isinstance(log, MethodType):# if we get a function or a method use that.
+
+        # if we get a function or a method use that.
+        if isinstance(log, types.FunctionType) or \
+                isinstance(log, types.MethodType):
             self.log = log
-            self.logPrivate = True # true means sensitive data will not be NOT be logged ... yeah i know oO
-        elif log:# if it something else (like True) use the own print_log
+            # true means sensitive data will not be NOT be logged ...
+            # yeah i know oO
+            self.logPrivate = True
+
+        elif log:  # if it something else (like True) use the own print_log
             self.log = self.print_log
-        else:# dont log at all
+
+        else:  # dont log at all
             self.log = self.print_log_dummy
 
-
-        self.link = AniDBLink(server, port, myport, self.log, logPrivate=self.logPrivate)
+        self.link = AniDBLink(server, port, myport, self.log,
+                              logPrivate=self.logPrivate)
         self.link.session = session
 
         self.clientname = clientname
         self.clientver = version
 
-        # from original lib 
-        self.mode = 1    #mode: 0=queue,1=unlock,2=callback
+        # from original lib
+        self.mode = 1  # mode: 0=queue,1=unlock,2=callback
 
         # to lock other threads out
         self.lock = threading.RLock()
@@ -62,7 +76,8 @@ class Connection(threading.Thread):
         self.counterAge = 0
 
     def print_log(self, data):
-        print(strftime("%Y-%m-%d %H:%M:%S", localtime(time())) + ": " + str(data))
+        print(strftime("%Y-%m-%d %H:%M:%S",
+                       localtime(time())) + ": " + str(data))
 
     def print_log_dummy(self, data):
         pass
@@ -70,29 +85,37 @@ class Connection(threading.Thread):
     def stop(self):
         self.logout(cutConnection=True)
 
-
     def cut(self):
         self.link.stop()
 
     def handle_response(self, response):
-        if response.rescode in ('501', '506') and response.req.command != 'AUTH':
-            self.log("seams like the last command got a not authed error back tring to reconnect now")
+        if response.rescode in ('501', '506') \
+                and response.req.command != 'AUTH':
+            self.log("seams like the last command got a not authed error back "
+                     "tring to reconnect now")
+
             if self.reAuthenticate():
                 response.req.resp = None
                 response = self.handle(response.req, response.req.callback)
 
-
     def handle(self, command, callback):
-
         self.lock.acquire()
-        if self.counterAge < (time() - 120): # the last request was older then 2 min reset delay and counter
+        # if the last request was older then 2 min reset delay and counter
+        if self.counterAge < (time() - 120):
             self.counter = 0
             self.link.delay = 2
-        else: # something happend in the last 120 seconds
+
+        else:  # something happend in the last 120 seconds
             if self.counter < 5:
-                self.link.delay = 2 # short term "A Client MUST NOT send more than 0.5 packets per second (that's one packet every two seconds, not two packets a second!)"
+                # short term "A Client MUST NOT send more than 0.5 packets per
+                # second (that's one packet every two seconds, not two packets
+                # a second!)"
+                self.link.delay = 2
+
             elif self.counter >= 5:
-                self.link.delay = 6 # long term "A Client MUST NOT send more than one packet every four seconds over an extended amount of time."
+                # long term "A Client MUST NOT send more than one packet every
+                # four seconds over an extended amount of time."
+                self.link.delay = 6
 
         if command.command not in ('AUTH', 'PING', 'ENCRYPT'):
             self.counterAge = time()
@@ -105,24 +128,30 @@ class Connection(threading.Thread):
             if callback:
                 callback(resp)
 
-        self.log("handling(" + str(self.counter) + "-" + str(self.link.delay) + ") command " + str(command.command))
+        self.log("handling(" + str(self.counter) + "-" + str(self.link.delay) +
+                 ") command " + str(command.command))
 
-        #make live request
-        command.authorize(self.mode, self.link.new_tag(), self.link.session, callback_wrapper)
+        # make live request
+        command.authorize(self.mode, self.link.new_tag(), self.link.session,
+                          callback_wrapper)
         self.link.request(command)
 
-        #handle mode 1 (wait for response)
+        # handle mode 1 (wait for response)
         if self.mode == 1:
             command.wait_response()
+
             try:
                 command.resp
+
             except:
                 self.lock.release()
-                #Allow empty response for description - if this is a real timeout so be it.
+
+                # Allow empty response for description - if this is a real
+                # timeout so be it.
                 if command.command == 'ANIMEDESC':
-                  return None
+                    return None
                 else:
-                  raise AniDBCommandTimeoutError, "Command has timed out"
+                    raise AniDBCommandTimeoutError("Command has timed out")
 
             self.handle_response(command.resp)
             self.lock.release()
@@ -132,10 +161,12 @@ class Connection(threading.Thread):
 
     def authed(self, reAuthenticate=False):
         self.lock.acquire()
-        authed = (self.link.session != None)
+        authed = not self.link.session
+
         if not authed and (reAuthenticate or self.keepAlive):
             self.reAuthenticate()
-            authed = (self.link.session != None)
+            authed = not self.link.session
+
         self.lock.release()
         return authed
 
@@ -152,14 +183,19 @@ class Connection(threading.Thread):
         self.lastKeepAliveCheck = time()
         self.log("auto check !")
         # check every 30 minutes if the session is still valid
-        # if not reauthenticate 
+        # if not reauthenticate
         if self.lastAuth and time() - self.lastAuth > 1800:
             self.log("auto uptime !")
-            self.uptime() # this will update the self.link.session and will refresh the session if it is still alive
+            # this will update the self.link.session and will refresh the
+            # session if it is still alive
+            self.uptime()
 
-            if self.authed(): # if we are authed we set the time
+            if self.authed():
+                # if we are authed we set the time
                 self.lastAuth = time()
-            else: # if we aren't authed and we have the user and pw then reauthenticate
+            else:
+                # if we aren't authed and we have the user and pw then
+                # reauthenticate
                 self.reAuthenticate()
 
         # issue a ping every 20 minutes after the last package
@@ -168,48 +204,53 @@ class Connection(threading.Thread):
             self.log("auto ping !")
             self.ping()
 
-
     def run(self):
         while self.keepAlive:
             self.keep_alive()
             sleep(120)
 
-
     def auth(self, username, password, nat=None, mtu=None, callback=None):
         """
         Login to AniDB UDP API
-        
+
         parameters:
         username - your anidb username
         password - your anidb password
-        nat     - if this is 1, response will have "address" in attributes with your "ip:port" (default:0)
+        nat     - if this is 1, response will have "address" in attributes
+                  with your "ip:port" (default:0)
         mtu     - maximum transmission unit (max packet size) (default: 1400)
-        
+
         """
         self.log("ok1")
         if self.keepAlive:
             self.log("ok2")
             self.username = username
             self.password = password
-            if self.is_alive() == False:
+
+            if not self.is_alive():
                 self.log("You wanted to keep this thing alive!")
-                if self.iamALIVE == False:
+
+                if not self.iamALIVE:
                     self.log("Starting thread now...")
                     self.start()
                     self.iamALIVE = True
-                else:
-                    self.log("not starting thread seams like it is already running. this must be a reAuthenticate")
 
+                else:
+                    self.log("not starting thread seams like it is already "
+                             "running. this must be a reAuthenticate")
 
         self.lastAuth = time()
-        return self.handle(AuthCommand(username, password, 3, self.clientname, self.clientver, nat, 1, 'utf8', mtu), callback)
+        return self.handle(adb.cmd.AuthCommand(username, password, 3,
+                                               self.clientname,
+                                               self.clientver, nat, 1, 'utf8',
+                                               mtu), callback)
 
     def logout(self, cutConnection=False, callback=None):
         """
         Log out from AniDB UDP API
-        
+
         """
-        result = self.handle(LogoutCommand(), callback)
+        result = self.handle(adb.cmd.LogoutCommand(), callback)
         if(cutConnection):
             self.cut()
         return result
@@ -225,9 +266,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         notify msg [buddy]
-        
+
         """
-        return self.handle(PushCommand(notify, msg, buddy), callback)
+        return self.handle(adb.cmd.PushCommand(notify, msg, buddy), callback)
 
     def pushack(self, nid, callback=None):
         """
@@ -238,27 +279,28 @@ class Connection(threading.Thread):
 
         structure of parameters:
         nid
-        
-        """
-        return self.handle(PushAckCommand(nid), callback)
 
-    def notifyadd(self, aid=None, gid=None, type=None, priority=None, callback=None):
+        """
+        return self.handle(adb.cmd.PushAckCommand(nid), callback)
+
+    def notifyadd(self, aid=None, gid=None, type=None, priority=None,
+                  callback=None):
         """
         Add a notification
-        
+
         parameters:
         aid    - Anime id
         gid - Group id
         type - Type of notification: type=>  0=all, 1=new, 2=group, 3=complete
         priority - low = 0, medium = 1, high = 2 (unconfirmed)
-        
+
         structure of parameters:
         [aid={int}|gid={int}]&type={int}&priority={int}
-        
+
         """
 
-        return self.handle(NotifyAddCommand(aid, gid, type, priority), callback)
-
+        return self.handle(adb.cmd.NotifyAddCommand(aid, gid, type, priority),
+                           callback)
 
     def notify(self, buddy=None, callback=None):
         """
@@ -269,16 +311,16 @@ class Connection(threading.Thread):
 
         structure of parameters:
         [buddy]
-        
+
         """
-        return self.handle(NotifyCommand(buddy), callback)
+        return self.handle(adb.cmd.NotifyCommand(buddy), callback)
 
     def notifylist(self, callback=None):
         """
         List all pending notifications/messages
-        
+
         """
-        return self.handle(NotifyListCommand(), callback)
+        return self.handle(adb.cmd.NotifyListCommand(), callback)
 
     def notifyget(self, type, id, callback=None):
         """
@@ -290,9 +332,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         type id
-        
+
         """
-        return self.handle(NotifyGetCommand(type, id), callback)
+        return self.handle(adb.cmd.NotifyGetCommand(type, id), callback)
 
     def notifyack(self, type, id, callback=None):
         """
@@ -304,9 +346,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         type id
-        
+
         """
-        return self.handle(NotifyAckCommand(type, id), callback)
+        return self.handle(adb.cmd.NotifyAckCommand(type, id), callback)
 
     def buddyadd(self, uid=None, uname=None, callback=None):
         """
@@ -318,9 +360,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         (uid|uname)
-        
+
         """
-        return self.handle(BuddyAddCommand(uid, uname), callback)
+        return self.handle(adb.cmd.BuddyAddCommand(uid, uname), callback)
 
     def buddydel(self, uid, callback=None):
         """
@@ -331,9 +373,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         uid
-        
+
         """
-        return self.handle(BuddyDelCommand(uid), callback)
+        return self.handle(adb.cmd.BuddyDelCommand(uid), callback)
 
     def buddyaccept(self, uid, callback=None):
         """
@@ -344,9 +386,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         uid
-        
+
         """
-        return self.handle(BuddyAcceptCommand(uid), callback)
+        return self.handle(adb.cmd.BuddyAcceptCommand(uid), callback)
 
     def buddydeny(self, uid, callback=None):
         """
@@ -357,9 +399,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         uid
-        
+
         """
-        return self.handle(BuddyDenyCommand(uid), callback)
+        return self.handle(adb.cmd.BuddyDenyCommand(uid), callback)
 
     def buddylist(self, startat, callback=None):
         """
@@ -370,9 +412,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         startat
-        
+
         """
-        return self.handle(BuddyListCommand(startat), callback)
+        return self.handle(adb.cmd.BuddyListCommand(startat), callback)
 
     def buddystate(self, startat, callback=None):
         """
@@ -383,26 +425,27 @@ class Connection(threading.Thread):
 
         structure of parameters:
         startat
-        
-        """
-        return self.handle(BuddyStateCommand(startat), callback)
 
-    def anime(self, aid=None, aname=None, amask= -1, callback=None):
+        """
+        return self.handle(adb.cmd.BuddyStateCommand(startat), callback)
+
+    def anime(self, aid=None, aname=None, amask=-1, callback=None):
         """
         Get information about an anime
 
         parameters:
         aid    - anime id
         aname    - name of the anime
-        amask    - a bitfield describing what information you want about the anime
-        
+        amask    - a bitfield describing what information you want about the
+                   anime
+
         structure of parameters:
         (aid|aname) [amask]
-        
+
         structure of amask:
-        
+
         """
-        return self.handle(AnimeCommand(aid, aname, amask), callback)
+        return self.handle(adb.cmd.AnimeCommand(aid, aname, amask), callback)
 
     def animedesc(self, aid=None, part=0, callback=None):
         """
@@ -412,9 +455,10 @@ class Connection(threading.Thread):
         aid    - anime id
         part   - part number
         """
-        return self.handle(AnimeDescCommand(aid, part), callback)
+        return self.handle(adb.cmd.AnimeDescCommand(aid, part), callback)
 
-    def episode(self, eid=None, aid=None, aname=None, epno=None, callback=None):
+    def episode(self, eid=None, aid=None, aname=None, epno=None,
+                callback=None):
         """
         Get information about an episode
 
@@ -427,11 +471,14 @@ class Connection(threading.Thread):
         structure of parameters:
         eid
         (aid|aname) epno
-        
-        """
-        return self.handle(EpisodeCommand(eid, aid, aname, epno), callback)
 
-    def file(self, fid=None, size=None, ed2k=None, aid=None, aname=None, gid=None, gname=None, epno=None, fmask= -1, amask=0, callback=None):
+        """
+        return self.handle(adb.cmd.EpisodeCommand(eid, aid, aname, epno),
+                           callback)
+
+    def file(self, fid=None, size=None, ed2k=None, aid=None, aname=None,
+             gid=None, gname=None, epno=None, fmask=-1, amask=0,
+             callback=None):
         """
         Get information about a file
 
@@ -444,8 +491,10 @@ class Connection(threading.Thread):
         gid    - group id
         gname    - name of the group
         epno    - number of the episode
-        fmask    - a bitfield describing what information you want about the file
-        amask    - a bitfield describing what information you want about the anime
+        fmask    - a bitfield describing what information you want about the
+                   file
+        amask    - a bitfield describing what information you want about the
+                   anime
 
         structure of parameters:
         fid [fmask] [amask]
@@ -486,7 +535,7 @@ class Connection(threading.Thread):
         29    -        -
         30    filename    anidb file name
         31    -        -
-        
+
         structure of amask:
         bit    key        description
         0    gname        group name
@@ -521,9 +570,11 @@ class Connection(threading.Thread):
         29    producerids    producer id list
         30    -        -
         31    -        -
-        
+
         """
-        return self.handle(FileCommand(fid, size, ed2k, aid, aname, gid, gname, epno, fmask, amask), callback)
+        return self.handle(adb.cmd.FileCommand(fid, size, ed2k, aid, aname,
+                                               gid, gname, epno, fmask, amask),
+                           callback)
 
     def group(self, gid=None, gname=None, callback=None):
         """
@@ -535,16 +586,19 @@ class Connection(threading.Thread):
 
         structure of parameters:
         (gid|gname)
-        
+
         """
-        return self.handle(GroupCommand(gid, gname), callback)
+        return self.handle(adb.cmd.GroupCommand(gid, gname), callback)
 
     def groupstatus(self, aid=None, state=None, callback=None):
         """
-        Returns a list of group names and ranges of episodes released by the group for a given anime.
+        Returns a list of group names and ranges of episodes released by the
+        group for a given anime.
+
         parameters:
         aid    - anime id
-        state - If state is not supplied, groups with a completion state of 'ongoing', 'finished', or 'complete' are returned
+        state - If state is not supplied, groups with a completion state of
+                'ongoing', 'finished', or 'complete' are returned
             state values:
                 1 -> ongoing
                 2 -> stalled
@@ -553,7 +607,7 @@ class Connection(threading.Thread):
                 5 -> finished
                 6 -> specials only
         """
-        return self.handle(GroupstatusCommand(aid, state), callback)
+        return self.handle(adb.cmd.GroupstatusCommand(aid, state), callback)
 
     def producer(self, pid=None, pname=None, callback=None):
         """
@@ -565,12 +619,13 @@ class Connection(threading.Thread):
 
         structure of parameters:
         (pid|pname)
-        
+
         """
 
-        return self.handle(ProducerCommand(pid, pname), callback)
+        return self.handle(adb.cmd.ProducerCommand(pid, pname), callback)
 
-    def mylist(self, lid=None, fid=None, size=None, ed2k=None, aid=None, aname=None, gid=None, gname=None, epno=None, callback=None):
+    def mylist(self, lid=None, fid=None, size=None, ed2k=None, aid=None,
+               aname=None, gid=None, gname=None, epno=None, callback=None):
         """
         Get information about your mylist
 
@@ -590,11 +645,16 @@ class Connection(threading.Thread):
         fid
         size ed2k
         (aid|aname) (gid|gname) epno
-        
-        """
-        return self.handle(MyListCommand(lid, fid, size, ed2k, aid, aname, gid, gname, epno), callback)
 
-    def mylistadd(self, lid=None, fid=None, size=None, ed2k=None, aid=None, aname=None, gid=None, gname=None, epno=None, edit=None, state=None, viewed=None, source=None, storage=None, other=None, callback=None):
+        """
+        return self.handle(adb.cmd.MyListCommand(lid, fid, size, ed2k, aid,
+                                                 aname, gid, gname, epno),
+                           callback)
+
+    def mylistadd(self, lid=None, fid=None, size=None, ed2k=None, aid=None,
+                  aname=None, gid=None, gname=None, epno=None, edit=None,
+                  state=None, viewed=None, source=None, storage=None,
+                  other=None, callback=None):
         """
         Add/Edit information to/in your mylist
 
@@ -608,7 +668,8 @@ class Connection(threading.Thread):
         gid    - group id
         gname    - name of the group
         epno    - number of the episode
-        edit    - whether to add to mylist or edit an existing entry (0=add,1=edit)
+        edit    - whether to add to mylist or edit an existing entry
+                  (0=add,1=edit)
         state    - the location of the file
         viewed    - whether you have watched the file (0=unwatched,1=watched)
         source    - where you got the file (bittorrent,dc++,ed2k,...)
@@ -620,25 +681,33 @@ class Connection(threading.Thread):
         fid [state viewed source storage other] [edit]
         size ed2k [state viewed source storage other] [edit]
         (aid|aname) (gid|gname) epno [state viewed source storage other]
-        (aid|aname) edit=1 [(gid|gname) epno] [state viewed source storage other]
+        (aid|aname) edit=1 [(gid|gname) epno] \
+            [state viewed source storage other]
 
         structure of state:
         value    meaning
-        0    unknown    - state is unknown or the user doesn't want to provide this information
+        0    unknown    - state is unknown or the user doesn't want to provide
+                          this information
         1    on hdd    - the file is stored on hdd
         2    on cd    - the file is stored on cd
-        3    deleted    - the file has been deleted or is not available for other reasons (i.e. reencoded)
-        
+        3    deleted    - the file has been deleted or is not available for
+                          other reasons (i.e. reencoded)
+
         structure of epno:
         value    meaning
         x    target episode x
         0    target all episodes
         -x    target all episodes upto x
-        
-        """
-        return self.handle(MyListAddCommand(lid, fid, size, ed2k, aid, aname, gid, gname, epno, edit, state, viewed, source, storage, other), callback)
 
-    def mylistdel(self, lid=None, fid=None, aid=None, aname=None, gid=None, gname=None, epno=None, callback=None):
+        """
+        return self.handle(adb.cmd.MyListAddCommand(lid, fid, size, ed2k, aid,
+                                                    aname, gid, gname, epno,
+                                                    edit, state, viewed,
+                                                    source, storage, other),
+                           callback)
+
+    def mylistdel(self, lid=None, fid=None, aid=None, aname=None, gid=None,
+                  gname=None, epno=None, callback=None):
         """
         Delete information from your mylist
 
@@ -659,16 +728,19 @@ class Connection(threading.Thread):
         (aid|aname) (gid|gname) epno
 
         """
-        return self.handle(MyListCommand(lid, fid, aid, aname, gid, gname, epno), callback)
+        return self.handle(adb.cmd.MyListCommand(lid, fid, aid, aname, gid,
+                                                 gname, epno),
+                           callback)
 
     def myliststats(self, callback=None):
         """
         Get summary information of your mylist
-        
-        """
-        return self.handle(MyListStatsCommand(), callback)
 
-    def vote(self, type, id=None, name=None, value=None, epno=None, callback=None):
+        """
+        return self.handle(adb.cmd.MyListStatsCommand(), callback)
+
+    def vote(self, type, id=None, name=None, value=None, epno=None,
+             callback=None):
         """
         Rate an anime/episode/group
 
@@ -693,14 +765,15 @@ class Connection(threading.Thread):
         -x     revoke vote
         0     get old vote
         100-1000 give vote
-        
+
         """
-        return self.handle(VoteCommand(type, id, name, value, epno), callback)
+        return self.handle(adb.cmd.VoteCommand(type, id, name, value, epno),
+                           callback)
 
     def randomanime(self, type, callback=None):
         """
         Get information of random anime
-        
+
         parameters:
         type    - where to take the random anime
 
@@ -713,16 +786,16 @@ class Connection(threading.Thread):
         1    watched
         2    unwatched
         3    mylist
-        
+
         """
-        return self.handle(RandomAnimeCommand(type), callback)
+        return self.handle(adb.cmd.RandomAnimeCommand(type), callback)
 
     def ping(self, callback=None):
         """
         Test connectivity to AniDB UDP API
-        
+
         """
-        return self.handle(PingCommand(), callback)
+        return self.handle(adb.cmd.PingCommand(), callback)
 
     def encrypt(self, user, apipassword, type=None, callback=None):
         """
@@ -735,9 +808,10 @@ class Connection(threading.Thread):
 
         structure of parameters:
         user [type]
-        
+
         """
-        return self.handle(EncryptCommand(user, apipassword, type), callback)
+        return self.handle(adb.cmd.EncryptCommand(user, apipassword, type),
+                           callback)
 
     def encoding(self, name, callback=None):
         """
@@ -751,15 +825,25 @@ class Connection(threading.Thread):
 
         comments:
         DO NOT USE THIS!
-        utf8 is the only encoding which will support all the text in anidb responses
-        the responses have japanese, russian, french and probably other alphabets as well
-        even if you can't display utf-8 locally, don't change the server-client -connections encoding
-        rather, make python convert the encoding when you DISPLAY the text
-        it's better that way, let it go as utf8 to databases etc. because then you've the real data stored
-        
+        utf8 is the only encoding which will support all the text in anidb
+        responses.
+        the responses have japanese, russian, french and probably other
+        alphabets as well.
+        even if you can't display utf-8 locally, don't change the
+        server-client -connections encoding.
+        rather, make python convert the encoding when you DISPLAY the text.
+        it's better that way, let it go as utf8 to databases etc. because then
+        you've the real data stored.
+
         """
-        raise AniDBError, "pylibanidb sets the encoding to utf8 as default and it's stupid to use any other encoding. you WILL lose some data if you use other encodings, and now you've been warned. you will need to modify the code yourself if you want to do something as stupid as changing the encoding"
-        return self.handle(EncodingCommand(name), callback)
+        raise adb.err.AniDBError("pylibanidb sets the encoding to utf8 as "
+                                 "default and it's stupid to use any other "
+                                 "encoding. you WILL lose some data if you "
+                                 "use other encodings, and now you've been "
+                                 "warned. you will need to modify the code "
+                                 "yourself if you want to do something as "
+                                 "stupid as changing the encoding")
+        return self.handle(adb.cmd.EncodingCommand(name), callback)
 
     def sendmsg(self, to, title, body, callback=None):
         """
@@ -772,9 +856,9 @@ class Connection(threading.Thread):
 
         structure of parameters:
         to title body
-        
+
         """
-        return self.handle(SendMsgCommand(to, title, body), callback)
+        return self.handle(adb.cmd.SendMsgCommand(to, title, body), callback)
 
     def user(self, user, callback=None):
         """
@@ -785,20 +869,20 @@ class Connection(threading.Thread):
 
         structure of parameters:
         user
-        
+
         """
-        return self.handle(UserCommand(user), callback)
+        return self.handle(adb.cmd.UserCommand(user), callback)
 
     def uptime(self, callback=None):
         """
         Retrieve server uptime
-        
+
         """
-        return self.handle(UptimeCommand(), callback)
+        return self.handle(adb.cmd.UptimeCommand(), callback)
 
     def version(self, callback=None):
         """
         Retrieve server version
-        
+
         """
-        return self.handle(VersionCommand(), callback)
+        return self.handle(adb.cmd.VersionCommand(), callback)

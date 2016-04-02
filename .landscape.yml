@@ -1,3 +1,7 @@
+strictness: veryhigh
+doc-warnings: true
+pep8:
+    full: true
 pylint:
     disable:
         - r0913

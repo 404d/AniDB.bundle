@@ -13,15 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with aDBa.  If not, see <http://www.gnu.org/licenses/>.
 
-from time import time, sleep
 import aniDBfileInfo as fileInfo
-from lxml import etree
-from lxml.etree import ElementTree as etree
-import os, re, string
 from aniDBmaper import AniDBMaper
-from aniDBtvDBmaper import TvDBMap
-from aniDBerrors import *
-
+import aniDBerrors as err
 
 
 class aniDBabstractObject(object):
@@ -68,14 +62,17 @@ class aniDBabstractObject(object):
 
     def build_names(self):
         names = []
-        if self.dataDict.has_key('english_name'):
-          names = self.easy_extend(names, self.dataDict['english_name'])
-        if self.dataDict.has_key('short_name_list'):
-          names = self.easy_extend(names, self.dataDict['short_name_list'])
-        if self.dataDict.has_key('synonym_list'):
-          names = self.easy_extend(names, self.dataDict['synonym_list'])
-        if self.dataDict.has_key('other_name'):
-          names = self.easy_extend(names, self.dataDict['other_name'])
+        if "english_name" in self.dataDict:
+            names = self.easy_extend(names, self.dataDict['english_name'])
+
+        if "short_name_list" in self.dataDict:
+            names = self.easy_extend(names, self.dataDict['short_name_list'])
+
+        if "synonym_list" in self.dataDict:
+            names = self.easy_extend(names, self.dataDict['synonym_list'])
+
+        if "other_name" in self.dataDict:
+            names = self.easy_extend(names, self.dataDict['other_name'])
 
         self.allNames = names
 
@@ -88,7 +85,6 @@ class aniDBabstractObject(object):
 
         return initialList
 
-
     def load_data(self):
         return False
 
@@ -96,9 +92,9 @@ class aniDBabstractObject(object):
         """
         type - Type of notification: type=>  0=all, 1=new, 2=group, 3=complete
         priority - low = 0, medium = 1, high = 2 (unconfirmed)
-        
+
         """
-        if(self.dataDict.has_key('aid')):
+        if "aid" in self.dataDict:
             self.aniDB.notifyadd(aid=self.dataDict['aid'], type=1, priority=1)
 
 
@@ -116,15 +112,16 @@ class AnimeDesc(aniDBabstractObject):
     def load_data(self):
         """load the data from anidb"""
         self.rawData = self.aniDB.animedesc(aid=self.aid, part=self.part)
-        
+
         if self.rawData:
-          self.fill(self.rawData.datalines[0])
-          self.build_names()
-          self.loaded = True
+            self.fill(self.rawData.datalines[0])
+            self.build_names()
+            self.loaded = True
 
 
 class Anime(aniDBabstractObject):
-    def __init__(self, aniDB, name=None, aid=None, paramsA=None, autoCorrectName=False, load=False):
+    def __init__(self, aniDB, name=None, aid=None, paramsA=None,
+                 autoCorrectName=False, load=False):
 
         self.maper = AniDBMaper()
         self.allAnimeXML = None
@@ -133,7 +130,7 @@ class Anime(aniDBabstractObject):
         self.aid = aid
 
         if not (self.name or self.aid):
-            raise AniDBIncorrectParameterError("No aid or name available")
+            raise err.AniDBIncorrectParameterError("No aid or name available")
 
         if not (self.name or self.aid):
             raise ValueError
@@ -153,7 +150,8 @@ class Anime(aniDBabstractObject):
         if not (self.name or self.aid):
             raise ValueError
 
-        self.rawData = self.aniDB.anime(aid=self.aid, aname=self.name, amask=self.bitCode)
+        self.rawData = self.aniDB.anime(aid=self.aid, aname=self.name,
+                                        amask=self.bitCode)
         if self.rawData.datalines:
             self.fill(self.rawData.datalines[0])
             self.builPreSequal()
@@ -165,31 +163,35 @@ class Anime(aniDBabstractObject):
         self.rawData = self.aniDB.groupstatus(aid=self.aid)
         self.release_groups = []
         for line in self.rawData.datalines:
-            self.release_groups.append({"name":unicode(line["name"], "utf-8"),
-                                        "rating":line["rating"],
-                                        "range":line["episode_range"]
-                                        })
+            self.release_groups.append({
+                "name": unicode(line["name"], "utf-8"),
+                "rating": line["rating"],
+                "range": line["episode_range"],
+            })
         return self.release_groups
 
     def builPreSequal(self):
-        if self.dataDict.has_key('related_aid_list') and self.dataDict.has_key('related_aid_type'):
+        if "related_aid_list" in self.dataDict \
+                and "related_aid_type" in self.dataDict:
+
             try:
                 for i in range(len(self.related_aid_list)):
+                    relation = self.dataDict['related_aid_list'][i]
                     if self.related_aid_type[i] == 2:
-                        self.dataDict["prequal"] = self.dataDict['related_aid_list'][i]
+                        self.dataDict["prequal"] = relation
                     elif self.related_aid_type[i] == 1:
-                        self.dataDict["sequal"] = self.dataDict['related_aid_list'][i]
-            except:
-                if self.related_aid_type == 2:
-                    self.dataDict["prequal"] = self.dataDict['related_aid_list']
-                elif self.str_related_aid_type == 1:
-                    self.dataDict["sequal"] = self.dataDict['related_aid_list']
+                        self.dataDict["sequal"] = relation
 
+            except:
+                relation = self.dataDict['related_aid_list']
+                if self.related_aid_type == 2:
+                    self.dataDict["prequal"] = relation
+                elif self.str_related_aid_type == 1:
+                    self.dataDict["sequal"] = relation
 
 
 class Episode(aniDBabstractObject):
-
-    def __init__(self, aniDB, epid=None, aid = None, epno=None, load=False):
+    def __init__(self, aniDB, epid=None, aid=None, epno=None, load=False):
         if not aniDB and not epid and not (aid and epno):
             return None
 
@@ -202,14 +204,16 @@ class Episode(aniDBabstractObject):
 
     def load_data(self):
         """load the data from anidb"""
-        self.rawData = self.aniDB.episode(eid = self.epid, aid=self.aid, epno=self.epno)
+        self.rawData = self.aniDB.episode(eid=self.epid, aid=self.aid,
+                                          epno=self.epno)
         self.fill(self.rawData.datalines[0])
         self.loaded = True
 
 
 class File(aniDBabstractObject):
 
-    def __init__(self, aniDB, number=None, epid=None, filePath=None, fid=None, epno=None, paramsA=None, paramsF=None, load=False):
+    def __init__(self, aniDB, number=None, epid=None, filePath=None, fid=None,
+                 epno=None, paramsA=None, paramsF=None, load=False):
         if not aniDB and not number and not epid and not file and not fid:
             return None
 
@@ -240,7 +244,11 @@ class File(aniDBabstractObject):
         if self.filePath and not (self.ed2k or self.size):
             (self.ed2k, self.size) = self.calculate_file_stuff(self.filePath)
 
-        self.rawData = self.aniDB.file(fid=self.fid, size=self.size, ed2k=self.ed2k, aid=None, aname=None, gid=None, gname=None, epno=self.epno, fmask=self.bitCodeF, amask=self.bitCodeA)
+        self.rawData = self.aniDB.file(fid=self.fid, size=self.size,
+                                       ed2k=self.ed2k, aid=None, aname=None,
+                                       gid=None, gname=None, epno=self.epno,
+                                       fmask=self.bitCodeF,
+                                       amask=self.bitCodeA)
         self.fill(self.rawData.datalines[0])
         self.build_names()
         self.loaded = True
@@ -248,23 +256,24 @@ class File(aniDBabstractObject):
     def add_to_mylist(self, status=None):
         """
         status:
-        0    unknown    - state is unknown or the user doesn't want to provide this information (default)
+        0    unknown    - state is unknown or the user doesn't want to provide
+                          this information (default)
         1    on hdd    - the file is stored on hdd
         2    on cd    - the file is stored on cd
-        3    deleted    - the file has been deleted or is not available for other reasons (i.e. reencoded)
-        
+        3    deleted    - the file has been deleted or is not available for
+                          other reasons (i.e. reencoded)
+
         """
         if self.filePath and not (self.ed2k or self.size):
             (self.ed2k, self.size) = self.calculate_file_stuff(self.filePath)
 
         try:
             self.aniDB.mylistadd(size=self.size, ed2k=self.ed2k, state=status)
-        except Exception, e :
+        except Exception, e:
             self.log(u"exception msg: " + str(e))
         else:
             # TODO: add the name or something
             self.log(u"Added the episode to anidb")
-
 
     def calculate_file_stuff(self, filePath):
         if not filePath:

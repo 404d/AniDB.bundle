@@ -6,3 +6,8 @@ pylint:
     disable:
         - r0913
         - unused-argument
+        - invalid-name
+        - relative-import
+        - too-many-public-methods
+        - too-many-instance-attributes
+        - N803

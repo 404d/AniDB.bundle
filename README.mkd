@@ -1,0 +1,3 @@
+Fixing this shit is going to be the end of me
+
+[![Code Health](https://landscape.io/github/404d/AniDB.bundle/master/landscape.svg?style=flat)](https://landscape.io/github/404d/AniDB.bundle/master)

@@ -17,6 +17,7 @@ pylint:
         - too-many-public-methods
         - too-many-instance-attributes
         - too-many-locals
+        - too-many-arguments
         - unused-variable
         - too-many-statements
         - too-many-return-statements

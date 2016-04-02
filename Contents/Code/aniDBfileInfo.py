@@ -16,7 +16,6 @@
 from __future__ import with_statement
 import hashlib
 import os
-from lxml import etree
 from lxml.etree import ElementTree as etree
 import urllib
 
@@ -42,40 +41,43 @@ def get_file_hash(filePath):
         return m
 
     if os.name == "nt":
-      path = r'file:///%s' % filePath.replace('\\', '/')
+        path = r'file:///%s' % filePath.replace('\\', '/')
     else:
-      path = r'file://%s' % filePath
-      
+        path = r'file://%s' % filePath
+
     f = urllib.urlopen(path)
     hashes = gen_hashes(f)
     if len(hashes) == 1:
         return hashes[0].encode("hex")
-    else: return md4_hash(reduce(lambda a,d: a + d, hashes, "")).hexdigest()
-        
-        
+    else:
+        return md4_hash(reduce(lambda a, d: a + d, hashes, "")).hexdigest()
+
+
 def get_file_size(path):
     size = os.path.getsize(path)
     return size
 
 
-
 def read_anidb_xml(filePath):
-    #if not filePath:
-       # filePath = os.path.join(os.path.dirname(os.path.abspath( __file__ )), "animetitles.xml")
+    """
+    if not filePath:
+        filePath = os.path.join(os.path.dirname(os.path.abspath( __file__ )), "animetitles.xml")
+    """
     return read_xml_into_etree(filePath)
 
 
 def read_tvdb_map_xml(filePath):
-    #if not filePath:
-        #filePath = os.path.join(os.path.dirname(os.path.abspath( __file__ )), "anime-list.xml")
+    """
+    if not filePath:
+        filePath = os.path.join(os.path.dirname(os.path.abspath( __file__ )), "anime-list.xml")
+    """
     return read_xml_into_etree(filePath)
 
 
 def read_xml_into_etree(filePath):
         if not filePath:
             return None
-        
-        f = open(filePath,"r")
-        xmlASetree = etree.ElementTree(file = f)
+
+        f = open(filePath, "r")
+        xmlASetree = etree.ElementTree(file=f)
         return xmlASetree
-    

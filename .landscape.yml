@@ -1,3 +1,4 @@
 pylint:
     disable:
         - r0913
+        - unused-argument

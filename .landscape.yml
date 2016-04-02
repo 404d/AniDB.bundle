@@ -2,12 +2,21 @@ strictness: veryhigh
 doc-warnings: true
 pep8:
     full: true
+    disable:
+        - d100
+        - N803
+        - N802
+        - N806
+        - N813
 pylint:
     disable:
-        - r0913
+        - D100
         - unused-argument
         - invalid-name
         - relative-import
         - too-many-public-methods
         - too-many-instance-attributes
-        - N803
+        - too-many-locals
+        - unused-variable
+        - too-many-statements
+        - too-many-return-statements

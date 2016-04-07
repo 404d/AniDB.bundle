@@ -22,6 +22,7 @@ LANGUAGE_MAP = dict()
 
 
 def Start():
+    """Plex Plugin entrypoint."""
     HTTP.CacheTime = 3600
     LANGUAGE_MAP["English"] = "english_name"
     LANGUAGE_MAP["Romaji"] = "romaji_name"
@@ -29,11 +30,14 @@ def Start():
 
 
 def titleKey():
+    """Utility method for finding the key name of the currently user-selected
+    language that should be used for loading show and episode names."""
     titlePref = Prefs["title_lang"]
     return LANGUAGE_MAP[titlePref]
 
 
 def checkConnection():
+    """Plugin agent for managing the API session."""
     global LAST_ACCESS
     global CONNECTION
 
@@ -56,8 +60,12 @@ def checkConnection():
 
 
 class MotherAgent:
+    """Base metadata agent with utility functions for loading data from AniDB.
+    """
 
     def connect(self):
+        """Create an API session and authenticate with the stored credentials.
+        """
 
         global CONNECTION
         global LAST_ACCESS
@@ -93,15 +101,25 @@ class MotherAgent:
         return CONNECTION
 
     def decodeString(self, string=None):
+        """"Decode" and return the given string.
+
+        From what I can see this function is used for stripping HTML and
+        BBcode-tags from e.g. descriptions and the like.
+        It recursively calls itself, gradually removing a matching set of <>
+        and [].
+        """
+
         if string is None:
             return string
 
+        # Look for a BBcode tag, remove it and recurse.
         bracketStart = string.find('[')
         bracketEnd = string.find(']')
         if bracketStart > -1 and bracketEnd > bracketStart:
             string = string[:bracketStart] + string[bracketEnd + 1:]
             string = self.decodeString(string)
 
+        # Look for an HTML tag, remove it and recurse.
         lt = string.find('<')
         gt = string.find('>')
         if lt > -1 and gt > lt:
@@ -111,6 +129,7 @@ class MotherAgent:
         return string
 
     def getDescription(self, connection, aid, part):
+        """Return paragraph `part` of the description for AniDB anime `aid`."""
 
         animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
 
@@ -131,6 +150,9 @@ class MotherAgent:
         return desc
 
     def getValueWithFallbacks(self, dictionary, *names):
+        """Return the value of the first non-empty `names`-element found in
+        `dictionary`."""
+
         for name in names:
             if name in dictionary and len(dictionary[name]) > 0:
                 return dictionary[name]
@@ -138,10 +160,21 @@ class MotherAgent:
         return None
 
     def getDate(self, timestampString):
+        """Return a datetime-object initialized with the given Unix timestamp.
+        """
         return datetime.fromtimestamp(int(timestampString))
 
     def getAnimeInfo(self, connection, aid, metadata, movie=False,
                      force=False):
+        """Return a Plex metadata instance for the AniDB anime `aid`.
+
+        Returns a Plex metadata object with the following fields filled out:
+            - Air date (/ Year - movies)
+            - Show name, in the language indicated by the `titleKey` method
+            - Rating
+            - Poster
+            - Show Description (via the `getDescription` method)
+        """
 
         Log("Loading metadata for anime aid " + aid)
 
@@ -194,6 +227,8 @@ class MotherAgent:
             raise e
 
     def doHashSearch(self, results, filename, connection):
+        """Return an AniDB file entry, given the path to a local file."""
+
         filePath = urllib.unquote(filename)
 
         fileInfo = adba.File(connection, filePath=filePath, paramsF=["aid"],
@@ -209,6 +244,9 @@ class MotherAgent:
         return fileInfo
 
     def doNameSearch(self, results, name, connection):
+        """Return an AniDB anime entry, given a search string for the name
+        field."""
+
         fileInfo = adba.Anime(connection, name=name,
                               paramsA=["english_name", "kanji_name",
                                        "romaji_name", "year", "aid"])
@@ -222,6 +260,12 @@ class MotherAgent:
         return fileInfo
 
     def doSearch(self, results, media, lang):
+        """Look up metadata for a Plex media object.
+
+        NOTE:
+        The results field is an array made by the caller, in which we're
+        supposed to push our result objects. Not very pythonic, or amirite
+        """
 
         connection = self.connect()
 
@@ -272,6 +316,7 @@ class MotherAgent:
 
 
 class AniDBAgentMovies(Agent.Movies, MotherAgent):
+    """Specialized AniDB metadata agent for Plex Movie libraries."""
 
     name = 'AniDB'
     primary_provider = True
@@ -285,6 +330,7 @@ class AniDBAgentMovies(Agent.Movies, MotherAgent):
             self.doSearch(results, media, lang)
         finally:
             LOCK.release()
+        # TODO: Move me into the MotherAgent class
 
     def update(self, metadata, media, lang, force):
         try:
@@ -292,6 +338,7 @@ class AniDBAgentMovies(Agent.Movies, MotherAgent):
             self.doUpdate(metadata, media, lang, force)
         finally:
             LOCK.release()
+        # TODO: Move me into the MotherAgent class
 
     def doUpdate(self, metadata, media, lang, force):
         connection = self.connect()
@@ -302,6 +349,7 @@ class AniDBAgentMovies(Agent.Movies, MotherAgent):
 
 
 class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
+    """Specialized AniDB metadata agent for Plex TV Show libraries."""
 
     name = 'AniDB'
     primary_provider = True
@@ -315,6 +363,7 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
             self.doSearch(results, media, lang)
         finally:
             LOCK.release()
+        # TODO: Move me into the MotherAgent class
 
     def update(self, metadata, media, lang, force):
         try:
@@ -322,6 +371,7 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
             self.doUpdate(metadata, media, lang, force)
         finally:
             LOCK.release()
+        # TODO: Move me into the MotherAgent class
 
     def doUpdate(self, metadata, media, lang, force=False):
 

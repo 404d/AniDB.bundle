@@ -21,6 +21,20 @@ LAST_ACCESS = None
 LANGUAGE_MAP = dict()
 
 
+def thread_lock(func):
+    "Automatically handle thread locking when calling the decorated function."
+
+    def do_call(*args, **kwargs):
+        try:
+            LOCK.acquire()
+            func(*args, **kwargs)
+
+        finally:
+            LOCK.release()
+
+    return do_call
+
+
 def Start():
     """Plex Plugin entrypoint."""
     HTTP.CacheTime = 3600
@@ -324,21 +338,15 @@ class AniDBAgentMovies(Agent.Movies, MotherAgent):
     accepts_from = ['com.plexapp.agents.localmedia',
                     'com.plexapp.agents.opensubtitles']
 
+    @thread_lock
     def search(self, results, media, lang):
-        try:
-            LOCK.acquire()
-            self.doSearch(results, media, lang)
-        finally:
-            LOCK.release()
         # TODO: Move me into the MotherAgent class
+        self.doSearch(results, media, lang)
 
+    @thread_lock
     def update(self, metadata, media, lang, force):
-        try:
-            LOCK.acquire()
-            self.doUpdate(metadata, media, lang, force)
-        finally:
-            LOCK.release()
         # TODO: Move me into the MotherAgent class
+        self.doUpdate(metadata, media, lang, force)
 
     def doUpdate(self, metadata, media, lang, force):
         connection = self.connect()
@@ -357,21 +365,15 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
     accepts_from = ['com.plexapp.agents.localmedia',
                     'com.plexapp.agents.opensubtitles']
 
+    @thread_lock
     def search(self, results, media, lang):
-        try:
-            LOCK.acquire()
-            self.doSearch(results, media, lang)
-        finally:
-            LOCK.release()
         # TODO: Move me into the MotherAgent class
+        self.doSearch(results, media, lang)
 
+    @thread_lock
     def update(self, metadata, media, lang, force):
-        try:
-            LOCK.acquire()
-            self.doUpdate(metadata, media, lang, force)
-        finally:
-            LOCK.release()
         # TODO: Move me into the MotherAgent class
+        self.doUpdate(metadata, media, lang, force)
 
     def doUpdate(self, metadata, media, lang, force=False):
 

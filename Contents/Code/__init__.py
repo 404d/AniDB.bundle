@@ -60,12 +60,10 @@ def checkConnection():
 
 
 class MotherAgent:
-    """Base metadata agent with utility functions for loading data from AniDB.
-    """
+    "Base metadata agent with utility functions for loading data from AniDB."
 
     def connect(self):
-        """Create an API session and authenticate with the stored credentials.
-        """
+        "Create an API session and authenticate with the stored credentials."
 
         global CONNECTION
         global LAST_ACCESS
@@ -129,7 +127,7 @@ class MotherAgent:
         return string
 
     def getDescription(self, connection, aid, part):
-        """Return paragraph `part` of the description for AniDB anime `aid`."""
+        "Return paragraph `part` of the description for AniDB anime `aid`."
 
         animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
 
@@ -151,7 +149,8 @@ class MotherAgent:
 
     def getValueWithFallbacks(self, dictionary, *names):
         """Return the value of the first non-empty `names`-element found in
-        `dictionary`."""
+        `dictionary`.
+        """
 
         for name in names:
             if name in dictionary and len(dictionary[name]) > 0:
@@ -245,7 +244,8 @@ class MotherAgent:
 
     def doNameSearch(self, results, name, connection):
         """Return an AniDB anime entry, given a search string for the name
-        field."""
+        field.
+        """
 
         fileInfo = adba.Anime(connection, name=name,
                               paramsA=["english_name", "kanji_name",

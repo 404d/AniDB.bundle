@@ -3,6 +3,8 @@ doc-warnings: true
 pep8:
     full: true
     disable:
+        - D202
+        - D203
         - d100
         - N803
         - N802

@@ -15,12 +15,11 @@
 
 from threading import Lock
 import cgi
-import aniDBresponses as _resp
-import aniDBerrors as _err
 
-adb = object()
-adb.resp = _resp
-adb.err = _err
+
+class adb(object):
+    import aniDBresponses as resp   # NOQA
+    import aniDBerrors as err  # NOQA
 
 
 class Command(object):

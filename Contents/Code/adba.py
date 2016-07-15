@@ -16,13 +16,12 @@ import threading
 from time import time, sleep, strftime, localtime
 import types
 from aniDBlink import AniDBLink
-import aniDBcommands as _cmd
-import aniDBerrors as _err
 from aniDBerrors import AniDBCommandTimeoutError
 
-adb = object()
-adb.cmd = _cmd
-adb.err = _err
+
+class adb(object):
+    import aniDBcommands as cmd  # NOQA
+    import aniDBerrors as err  # NOQA
 
 version = 100
 

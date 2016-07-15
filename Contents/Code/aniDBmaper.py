@@ -19,8 +19,8 @@ class AniDBMaper(object):
     blacklist = ('unused', 'retired', 'reserved')
 
     def getAnimeBitsA(self, amask):
-        _map = self.getAnimeMapA()
-        return self.getBitChain(_map, amask)
+        map_ = self.getAnimeMapA()
+        return self.getBitChain(map_, amask)
 
     def getAnimeCodesA(self, aBitChain):
         amap = self.getAnimeMapA()
@@ -42,19 +42,19 @@ class AniDBMaper(object):
         amap = self.getFileMapA()
         return self.getCodes(amap, bitChainA)
 
-    def getBitChain(self, _map, wanted):
+    def getBitChain(self, map_, wanted):
         """Return an hex string with the correct bit set corresponding to the
         wanted fields in the map.
         """
         bit = 0
         index = 0
-        for field in _map:
+        for field in map_:
             if field in wanted and field not in self.blacklist:
-                bit = bit ^ (1 << len(_map) - index - 1)
+                bit = bit ^ (1 << len(map_) - index - 1)
             index = index + 1
 
         bit = str(hex(bit)).lstrip("0x").rstrip("L")
-        bit = ''.join(["0" for unused in xrange(len(_map) / 4 - len(bit))]
+        bit = ''.join(["0" for unused in xrange(len(map_) / 4 - len(bit))]
                       ) + bit
         return bit
 
@@ -73,7 +73,7 @@ class AniDBMaper(object):
     def getAnimeMapA(self):
         # each line is one byte
         # only chnage this if the api changes
-        _map = ['aid', 'unused', 'year', 'type', 'related_aid_list',
+        map_ = ['aid', 'unused', 'year', 'type', 'related_aid_list',
                 'related_aid_type', 'category_list', 'category_weight_list',
                 'romaji_name', 'kanji_name', 'english_name', 'other_name',
                 'short_name_list', 'synonym_list', 'retired', 'retired',
@@ -88,12 +88,12 @@ class AniDBMaper(object):
                 'unused', 'unused', 'unused', 'specials_count',
                 'credits_count', 'other_count', 'trailer_count',
                 'parody_count', 'unused', 'unused', 'unused']
-        return _map
+        return map_
 
     def getFileMapF(self):
         # each line is one byte
         # only chnage this if the api changes
-        _map = ['unused', 'aid', 'eid', 'gid', 'mylist_id',
+        map_ = ['unused', 'aid', 'eid', 'gid', 'mylist_id',
                 'list_other_episodes', 'IsDeprecated', 'state', 'size', 'ed2k',
                 'md5', 'sha1', 'crc32', 'unused', 'unused', 'reserved',
                 'quality', 'source', 'audio_codec_list', 'audio_bitrate_list',
@@ -103,12 +103,12 @@ class AniDBMaper(object):
                 'unused', 'anidb_file_name', 'mylist_state',
                 'mylist_filestate', 'mylist_viewed', 'mylist_viewdate',
                 'mylist_storage', 'mylist_source', 'mylist_other', 'unused']
-        return _map
+        return map_
 
     def getFileMapA(self):
         # each line is one byte
         # only chnage this if the api changes
-        _map = ['anime_total_episodes', 'highest_episode_number', 'year',
+        map_ = ['anime_total_episodes', 'highest_episode_number', 'year',
                 'type', 'related_aid_list', 'related_aid_type',
                 'category_list', 'reserved', 'romaji_name', 'kanji_name',
                 'english_name', 'other_name', 'short_name_list',
@@ -117,7 +117,7 @@ class AniDBMaper(object):
                 'episode_vote_count', 'unused', 'unused', 'group_name',
                 'group_short_name', 'unused', 'unused', 'unused', 'unused',
                 'unused', 'date_aid_record_updated']
-        return _map
+        return map_
 
     def checkMapping(self, verbos=False):
 

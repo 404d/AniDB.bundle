@@ -23,6 +23,12 @@ LAST_ACCESS = None
 LANGUAGE_MAP = dict()
 
 
+def exception_hook(*args):
+    Log("".join(traceback.format_exception(*args)))
+
+sys.excepthook = exception_hook
+
+
 def thread_lock(func):
     "Automatically handle thread locking when calling the decorated function."
 

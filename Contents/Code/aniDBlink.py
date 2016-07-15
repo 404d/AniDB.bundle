@@ -133,18 +133,17 @@ class AniDBLink(threading.Thread):
                 if resp.rescode in ('504', '555'):
                     self.banned = True
                     self.banmsg = resp
-                    print("AniDB API informs that user or client is banned:",
-                          resp)
+                    Log("AniDB API informs that user or client is banned:",
+                        resp)
                 resp.handle()
                 if not cmd or not cmd.mode:
                     self.resp_queue(resp)
                 else:
                     self.tags.remove(resp.restag)
             except:
-                sys.excepthook(*sys.exc_info())
-                print("Avoiding flood by paranoidly panicing: Aborting link "
-                      "thread, killing connection, releasing waiters and "
-                      "quiting")
+                Log("Avoiding flood by paranoidly panicing: Aborting link "
+                    "thread, killing connection, releasing waiters and "
+                    "quiting")
                 self.sock.close()
 
                 try:

@@ -77,8 +77,8 @@ class Connection(threading.Thread):
         self.counterAge = 0
 
     def print_log(self, data):
-        print(strftime("%Y-%m-%d %H:%M:%S",
-                       localtime(time())) + ": " + str(data))
+        Log(strftime("%Y-%m-%d %H:%M:%S",
+            localtime(time())) + ": " + str(data))
 
     def print_log_dummy(self, data):
         pass

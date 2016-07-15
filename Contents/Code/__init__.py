@@ -7,6 +7,8 @@ else:
 import adba
 import urllib
 import threading
+import traceback
+import sys
 from datetime import datetime, timedelta
 
 ANIDB_PIC_URL_BASE = "http://img7.anidb.net/pics/anime/"
@@ -105,9 +107,12 @@ class MotherAgent:
             CONNECTION.auth(username, password)
             Log("Auth ok!")
 
-        except Exception, e:
-            Log("Connection exception, msg: " + str(e))
-            raise e
+        except Exception:
+            Log("Connection exception, traceback:")
+            Log("".join(traceback.format_exception(sys.exc_type,
+                                                   sys.exc_value,
+                                                   sys.exc_traceback)))
+            raise Exception("See INFO-level message above for traceback")
 
         LAST_ACCESS = datetime.now()
         return CONNECTION

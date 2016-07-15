@@ -16,6 +16,7 @@
 import socket
 import sys
 import zlib
+import traceback
 from time import time, sleep
 import threading
 from aniDBresponses import ResponseResolver

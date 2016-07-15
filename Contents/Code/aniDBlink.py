@@ -42,6 +42,7 @@ class AniDBLink(threading.Thread):
         self.delay = delay
         self.session = None
         self.banned = False
+        self.banmsg = "Unknown"
         self.crypt = None
 
         self.log = logFunction
@@ -131,8 +132,9 @@ class AniDBLink(threading.Thread):
                     self.crypt = None
                 if resp.rescode in ('504', '555'):
                     self.banned = True
+                    self.banmsg = resp
                     print("AniDB API informs that user or client is banned:",
-                          resp.resstr)
+                          resp)
                 resp.handle()
                 if not cmd or not cmd.mode:
                     self.resp_queue(resp)
@@ -206,7 +208,7 @@ class AniDBLink(threading.Thread):
     def send(self, command):
         if self.banned:
             self.log("NetIO | BANNED")
-            raise err.AniDBError("Not sending, banned")
+            raise err.AniDBError("Not sending, banned: %s" % self.banmsg)
         self.do_delay()
         self.lastpacket = time()
         command.started = time()

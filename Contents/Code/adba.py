@@ -17,6 +17,7 @@ from time import time, sleep, strftime, localtime
 import types
 from aniDBlink import AniDBLink
 from aniDBerrors import AniDBCommandTimeoutError
+from aniDBAbstracter import Anime, AnimeDesc, Episode, File  # NOQA
 
 
 class adb(object):
@@ -43,10 +44,11 @@ class Connection(threading.Thread):
             self.logPrivate = True
 
         elif log:  # if it something else (like True) use the own print_log
-            self.log = self.print_log
+            self.log = Log
 
         else:  # dont log at all
             self.log = self.print_log_dummy
+        self.logPrivate = True
 
         self.link = AniDBLink(server, port, myport, self.log,
                               logPrivate=self.logPrivate)

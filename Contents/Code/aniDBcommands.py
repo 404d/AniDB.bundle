@@ -79,8 +79,10 @@ class Command(object):
         return ' '.join([command, '&'.join(tmp)])
 
     def escape(self, data):
+        if not isinstance(data, unicode):
+            data = str(data)
         # Escape &, < and >, and convert unicode to ascii with XML entities.
-        data = cgi.replace(data).encode("ascii", "xmlcharrefreplace")
+        data = cgi.escape(data).encode("ascii", "xmlcharrefreplace")
         # Replace newlines with "<br />" (yes seriously, read the API spec.)
         return data.replace("\n", "<br />")
 

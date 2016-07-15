@@ -57,12 +57,15 @@ class Command(object):
     def handle(self, resp):
         self.resp = resp
 
-        if self.mode == 0:
+        if self.mode == 1:
             self.waiter.release()
 
         elif self.mode == 2:
             self.callback(resp)
 
+        else:
+            Log("Was told to handle response with mode %i -- this is not "
+                "supposed to happen!")
     def wait_response(self):
         self.waiter.acquire()
 

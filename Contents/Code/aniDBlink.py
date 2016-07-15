@@ -82,7 +82,7 @@ class AniDBLink(threading.Thread):
         return self.stopp.isSet()
 
     def print_log(self, data):
-        print data
+        Log(data)
 
     def print_log_dummy(self, data):
         pass
@@ -160,6 +160,7 @@ class AniDBLink(threading.Thread):
                 sys.exit()
 
     def handle_timeouts(self):
+        Log("in handle timeouts")
         willpop = []
         for tag, cmd in self.cmd_queue.iteritems():
             if not tag:
@@ -167,6 +168,8 @@ class AniDBLink(threading.Thread):
             if time() - cmd.started > self.timeout:
                 self.tags.remove(cmd.tag)
                 willpop.append(cmd.tag)
+                Log("released by timeout")
+
                 cmd.waiter.release()
 
         for tag in willpop:

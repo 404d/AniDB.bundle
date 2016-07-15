@@ -28,7 +28,7 @@ class ResponseResolver(object):
         resline = data.split('\n', -1)[0]
         lines = data.split('\n')[1:-1]
 
-        rescode, resstr = resline.split(' ', -1)
+        rescode, resstr = resline.split(' ', 1)
         if rescode[0] == 'T':
             restag = rescode
             rescode, resstr = resstr.split(' ', 1)

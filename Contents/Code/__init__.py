@@ -258,8 +258,7 @@ class MotherAgent:
 
     def doNameSearch(self, results, name, connection):
         """Return an AniDB anime entry, given a search string for the name
-        field.
-        """
+        field."""
 
         fileInfo = adba.Anime(connection, name=name,
                               paramsA=["english_name", "kanji_name",

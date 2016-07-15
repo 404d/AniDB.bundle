@@ -120,9 +120,12 @@ class AniDBLink(threading.Thread):
                 if resp.rescode in ('200', '201'):
                     self.session = resp.attrs['sesskey']
                 if resp.rescode in ('209',):
+                    # TODO: Check if this is worth implementing/possible to
+                    # implement in a sane way
                     print "sorry encryption is not supported"
                     raise
-                    #self.crypt=aes(md5(resp.req.apipassword+resp.attrs['salt']).digest())
+                    # self.crypt = aes(
+                    #   md5(resp.req.apipassword+resp.attrs['salt']).digest())
                 if resp.rescode in ('203', '403', '500', '501', '503', '506'):
                     self.session = None
                     self.crypt = None

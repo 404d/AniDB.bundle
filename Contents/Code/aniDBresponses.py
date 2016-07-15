@@ -84,15 +84,11 @@ class Response:
 
         self.datalines = []
         for rawline in self.rawlines:
+            rawline = (rawline
+                       .replace("<br />", "\n")
+                       .replace("/", "|")
+                       .replace("`", "'"))
             normal = self.toMap(self.codetail, rawline)
-            rawline = rawline[len(self.codetail):]
-            rep = []
-            if len(self.coderep):
-                while rawline:
-                    tmp = self.toMap(self.coderep, rawline)
-                    rawline = rawline[len(self.coderep):]
-                    rep.append(tmp)
-            #normal['rep'] = rep
             self.datalines.append(normal)
 
     def handle(self):
@@ -385,8 +381,6 @@ class FileResponse(Response):
 
         codeListF = self.maper.getFileCodesF(fmask)
         codeListA = self.maper.getFileCodesA(amask)
-        #print "File - codelistF: "+str(codeListF)
-        #print "File - codelistA: "+str(codeListA)
 
         self.codetail = tuple(['fid'] + codeListF + codeListA)
 

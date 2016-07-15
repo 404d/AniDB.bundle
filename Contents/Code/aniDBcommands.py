@@ -14,6 +14,7 @@
 # along with aDBa.  If not, see <http://www.gnu.org/licenses/>.
 
 from threading import Lock
+import cgi
 import aniDBresponses as _resp
 import aniDBerrors as _err
 
@@ -79,9 +80,10 @@ class Command(object):
         return ' '.join([command, '&'.join(tmp)])
 
     def escape(self, data):
-        # FIXME: HOLY FUCK WHAT THE HELL IS THIS
-        # GOOD THING I AIN'T SIGNING UNTIL SHIT LIKE THIS IS FIXED
-        return str(data).replace('&', '&amp;')
+        # Escape &, < and >, and convert unicode to ascii with XML entities.
+        data = cgi.replace(data).encode("ascii", "xmlcharrefreplace")
+        # Replace newlines with "<br />" (yes seriously, read the API spec.)
+        return data.replace("\n", "<br />")
 
     def raw_data(self):
         self.raw = self.flatten(self.command, self.parameters)
@@ -493,7 +495,8 @@ class MyListCommand(Command):
                          *rulevalues)
 
         if len(rows) > 1:
-            #resp=MultipleFilesFoundResponse(self, None, '322', 'CACHED MULTIPLE FILES FOUND', /*get fids from rows,  not gonna do this as you haven't got a real cache out of these..*/)
+            # TODO: Handle "322 "Cached Multiple Files Found. See history
+            # for original details.
             return None
         elif not len(rows):
             return None

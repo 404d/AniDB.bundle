@@ -58,22 +58,6 @@ def get_file_size(path):
     return size
 
 
-def read_anidb_xml(filePath):
-    """
-    if not filePath:
-        filePath = os.path.join(os.path.dirname(os.path.abspath( __file__ )), "animetitles.xml")
-    """
-    return read_xml_into_etree(filePath)
-
-
-def read_tvdb_map_xml(filePath):
-    """
-    if not filePath:
-        filePath = os.path.join(os.path.dirname(os.path.abspath( __file__ )), "anime-list.xml")
-    """
-    return read_xml_into_etree(filePath)
-
-
 def read_xml_into_etree(filePath):
         if not filePath:
             return None
@@ -81,3 +65,6 @@ def read_xml_into_etree(filePath):
         f = open(filePath, "r")
         xmlASetree = etree.ElementTree(file=f)
         return xmlASetree
+
+read_anidb_xml = read_xml_into_etree
+read_tvdb_map_xml = read_xml_into_etree

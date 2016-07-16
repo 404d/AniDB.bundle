@@ -136,12 +136,16 @@ class AniDBLink(threading.Thread):
                     self.banmsg = resp
                     Log("AniDB API informs that user or client is banned:",
                         resp)
+                if resp.rescode == "505":
+                    Log("Got illegal input or access denied. Either you're "
+                        "underprivileged or there's a bug somewhere.")
                 resp.handle()
                 if not cmd or not cmd.mode:
                     self.resp_queue(resp)
                 else:
                     self.tags.remove(resp.restag)
             except:
+                sys.excepthook(*sys.exc_info())
                 Log("Avoiding flood by paranoidly panicing: Aborting link "
                     "thread, killing connection, releasing waiters and "
                     "quiting")

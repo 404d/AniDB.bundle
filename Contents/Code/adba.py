@@ -12,6 +12,14 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with aDBa.  If not, see <http://www.gnu.org/licenses/>.
+if None:
+    from nonexistent import HTTP, Prefs, Thread, Proxy, MetadataSearchResult  # NOQA
+
+    def Log(msg):
+        print msg
+else:
+    Log("Running under Plex")
+
 import threading
 from time import time, sleep, strftime, localtime
 import types

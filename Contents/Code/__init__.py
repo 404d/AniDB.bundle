@@ -1,6 +1,9 @@
 if None:
-    from nonexistent import Log, HTTP, Prefs, Thread, Proxy, MetadataSearchResult  # NOQA
+    from nonexistent import HTTP, Prefs, Thread, Proxy, MetadataSearchResult  # NOQA
     from nonexistent import Locale, Agent, Dict
+
+    def Log(msg):
+        print msg
 else:
     Log("Running under Plex")
 

@@ -12,11 +12,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with aDBa.  If not, see <http://www.gnu.org/licenses/>.
+if None:
+    from nonexistent import HTTP, Prefs, Thread, Proxy, MetadataSearchResult  # NOQA
+
+    def Log(msg):
+        print msg
+else:
+    Log("Running under Plex")
+
 
 import socket
 import sys
 import zlib
-import traceback
 from time import time, sleep
 import threading
 from aniDBresponses import ResponseResolver

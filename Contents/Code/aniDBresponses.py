@@ -83,11 +83,8 @@ class Response:
         self.resstr = tmp[-1]
 
         self.datalines = []
+
         for rawline in self.rawlines:
-            rawline = (rawline
-                       .replace("<br />", "\n")
-                       .replace("/", "|")
-                       .replace("`", "'"))
             normal = self.toMap(self.codetail, rawline)
             self.datalines.append(normal)
 

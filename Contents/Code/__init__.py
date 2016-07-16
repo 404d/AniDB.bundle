@@ -162,7 +162,20 @@ class MotherAgent:
             Log("No description found for anime aid " + aid)
             return None
 
-        desc = self.decodeString(animeDesc.dataDict['description'])
+        desc = animeDesc.dataDict["description"]
+        desc = desc.replace("<br />", "\n").replace("`", "'")
+        desc = self.decodeString(desc)
+
+        # Clean description
+        lines = []
+        for line in desc.split("\n"):
+            # Remove info-lines
+            if line.startswith("*"):
+                continue
+
+            lines.append(line)
+
+        desc = "\n".join(lines).strip("\n")
 
         currentPart = int(animeDesc.dataDict['current_part'])
         maxParts = int(animeDesc.dataDict['max_parts'])
@@ -247,6 +260,7 @@ class MotherAgent:
         try:
             metadata.summary = self.getDescription(connection, metadata.id, 0)
         except Exception, e:
+            sys.excepthook(*sys.exc_info())
             Log("Could not load description, msg: " + str(e))
             raise e
 

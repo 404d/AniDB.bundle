@@ -369,7 +369,7 @@ class AniDBAgentMovies(Agent.Movies, MotherAgent):
         self.doSearch(results, media, lang)
 
     @thread_lock
-    def update(self, metadata, media, lang, force):
+    def update(self, metadata, media, lang, force=False):
         # TODO: Move me into the MotherAgent class
         self.doUpdate(metadata, media, lang, force)
 
@@ -396,11 +396,11 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
         self.doSearch(results, media, lang)
 
     @thread_lock
-    def update(self, metadata, media, lang, force):
+    def update(self, metadata, media, lang, force=False):
         # TODO: Move me into the MotherAgent class
         self.doUpdate(metadata, media, lang, force)
 
-    def doUpdate(self, metadata, media, lang, force=False):
+    def doUpdate(self, metadata, media, lang, force):
 
         connection = self.connect()
         if not connection:

@@ -1285,6 +1285,21 @@ class NoSuchAnimeResponse(Response):
         self.coderep = ()
 
 
+class NoSuchDescriptionResponse(Response):
+    def __init__(self, cmd, restag, rescode, resstr, datalines):
+        """
+        attributes:
+
+        data:
+
+        """
+        Response.__init__(self, cmd, restag, rescode, resstr, datalines)
+        self.codestr = 'NO_SUCH_DESCRIPTION'
+        self.codehead = ()
+        self.codetail = ()
+        self.coderep = ()
+
+
 class NoSuchEpisodeResponse(Response):
     def __init__(self, cmd, restag, rescode, resstr, datalines):
         """
@@ -1939,6 +1954,7 @@ responses = {
     '322': MultipleFilesFoundResponse,
     '325': NoGroupsFoundResponse,
     '330': NoSuchAnimeResponse,
+    '333': NoSuchDescriptionResponse,
     '340': NoSuchEpisodeResponse,
     '345': NoSuchProducerResponse,
     '350': NoSuchGroupResponse,

@@ -158,8 +158,12 @@ class MotherAgent:
         "Return one 1400-byte `part` of the description for AniDB anime `aid`."
 
         animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
-
-        animeDesc.load_data()
+        try:
+            animeDesc.load_data()
+        except IndexError:
+            # This should occurr when we get status code 333
+            Log("No description found for anime aid " + aid)
+            return None
 
         if "description" not in animeDesc.dataDict:
             Log("No description found for anime aid " + aid)

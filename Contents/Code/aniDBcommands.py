@@ -66,6 +66,7 @@ class Command(object):
         else:
             Log("Was told to handle response with mode %i -- this is not "
                 "supposed to happen!")
+
     def wait_response(self):
         self.waiter.acquire()
 
@@ -73,7 +74,8 @@ class Command(object):
         tmp = []
 
         for key, value in parameters.iteritems():
-            if value:
+
+            if value is not None:
                 tmp.append("%s=%s" % (
                     self.escape(key),
                     self.escape(value)

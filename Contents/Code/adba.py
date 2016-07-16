@@ -90,6 +90,8 @@ class Connection(threading.Thread):
         self.link.stop()
 
     def handle_response(self, response):
+        # I think I can add ban and other error-handling here if I can't get
+        # it to work some other place.
         if response.rescode in ('501', '506') \
                 and response.req.command != 'AUTH':
             self.log("seams like the last command got a not authed error back "

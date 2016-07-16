@@ -96,9 +96,11 @@ class Command(object):
         return self.raw
 
     def cached(self, interface, database):
+        Log("Hit cached method")
         return None
 
     def cache(self, interface, database):
+        Log("Hit cache method")
         pass
 
 
@@ -357,6 +359,7 @@ class ProducerCommand(Command):
         Command.__init__(self, 'PRODUCER', **parameters)
 
     def cached(self, intr, db):
+        Log("Hit cached method")
         pid = self.parameters['pid']
         pname = self.parameters['pname']
 
@@ -384,6 +387,7 @@ class ProducerCommand(Command):
             return resp
 
     def cache(self, intr, db):
+        Log("Hit cache method")
         if self.resp.rescode != '245' or self.cached(intr, db):
             return
 
@@ -439,6 +443,7 @@ class MyListCommand(Command):
         Command.__init__(self, 'MYLIST', **parameters)
 
     def cached(self, intr, db):
+        Log("Hit cached method")
         lid = self.parameters['lid']
         fid = self.parameters['fid']
         size = self.parameters['size']
@@ -513,6 +518,7 @@ class MyListCommand(Command):
             return resp
 
     def cache(self, intr, db):
+        Log("Hit cache method")
         if self.resp.rescode != '221' or self.cached(intr, db):
             return
 

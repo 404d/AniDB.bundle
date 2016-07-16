@@ -131,14 +131,17 @@ class AniDBLink(threading.Thread):
                 if resp.rescode in ('203', '403', '500', '501', '503', '506'):
                     self.session = None
                     self.crypt = None
-                if resp.rescode in ('504', '555'):
+                elif resp.rescode in ('504', '555'):
                     self.banned = True
                     self.banmsg = resp
                     Log("AniDB API informs that user or client is banned:",
                         resp)
-                if resp.rescode == "505":
+                elif resp.rescode == "505":
                     Log("Got illegal input or access denied. Either you're "
                         "underprivileged or there's a bug somewhere.")
+                else:
+                    Log("Got unhandled status code %s, proceeding as usual." %
+                        resp.rescode.__repr__())
                 resp.handle()
                 if not cmd or not cmd.mode:
                     self.resp_queue(resp)
@@ -164,7 +167,6 @@ class AniDBLink(threading.Thread):
                 sys.exit()
 
     def handle_timeouts(self):
-        Log("in handle timeouts")
         willpop = []
         for tag, cmd in self.cmd_queue.iteritems():
             if not tag:
@@ -172,7 +174,6 @@ class AniDBLink(threading.Thread):
             if time() - cmd.started > self.timeout:
                 self.tags.remove(cmd.tag)
                 willpop.append(cmd.tag)
-                Log("released by timeout")
 
                 cmd.waiter.release()
 

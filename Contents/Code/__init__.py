@@ -152,7 +152,7 @@ class MotherAgent:
         return string
 
     def getDescription(self, connection, aid, part):
-        "Return paragraph `part` of the description for AniDB anime `aid`."
+        "Return one 1400-byte `part` of the description for AniDB anime `aid`."
 
         animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
 

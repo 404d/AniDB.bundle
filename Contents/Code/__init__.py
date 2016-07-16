@@ -436,7 +436,7 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
 
         epno = episode
         if str(season) == "0":
-            epno = "S" + str(ep)
+            epno = "S" + str(epno)
 
         episodeKey = str(season) + "-" + str(episode) + "-"
 

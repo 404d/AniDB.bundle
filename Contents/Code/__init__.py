@@ -459,7 +459,7 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
         Log("Loading metadata for '" + metadata.title + "', season " +
             season + " episode " + epno + " from AniDB")
 
-        episode = adba.Episode(connection, aid=metadata.id, epno=episode)
+        episode = adba.Episode(connection, aid=metadata.id, epno=epno)
 
         try:
             episode.load_data()

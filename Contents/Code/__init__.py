@@ -376,8 +376,14 @@ class AniDBAgentMovies(Agent.Movies, MotherAgent):
         self.doSearch(results, media, lang)
 
     @thread_lock
-    def update(self, metadata, media, lang, force=False):
+    def update(self, metadata, media, lang, force=None):
         # TODO: Move me into the MotherAgent class
+
+        if force is None:
+            force = Prefs["skip_cache"]
+            Log("Caller didn't specify whether to skip cache. User pref: %s" %
+                force)
+
         self.doUpdate(metadata, media, lang, force)
 
     def doUpdate(self, metadata, media, lang, force):
@@ -403,8 +409,14 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
         self.doSearch(results, media, lang)
 
     @thread_lock
-    def update(self, metadata, media, lang, force=False):
+    def update(self, metadata, media, lang, force=None):
         # TODO: Move me into the MotherAgent class
+
+        if force is None:
+            force = Prefs["skip_cache"]
+            Log("Caller didn't specify whether to skip cache. User pref: %s" %
+                force)
+
         self.doUpdate(metadata, media, lang, force)
 
     def doUpdate(self, metadata, media, lang, force):

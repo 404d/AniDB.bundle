@@ -177,7 +177,13 @@ class MotherAgent:
         lines = []
         for line in desc.split("\n"):
             # Remove info-lines
-            if line.startswith("*"):
+            patterns = [
+                "*",
+                "Note: ",
+                "Source: ",
+            ]
+
+            if [line.startswith(pattern) for pattern in patterns]:
                 continue
 
             lines.append(line)

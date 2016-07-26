@@ -183,7 +183,7 @@ class MotherAgent:
                 "Source: ",
             ]
 
-            if [line.startswith(pattern) for pattern in patterns]:
+            if [True for pattern in patterns if line.startswith(pattern)]:
                 continue
 
             lines.append(line)

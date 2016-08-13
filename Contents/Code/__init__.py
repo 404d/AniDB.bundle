@@ -169,6 +169,16 @@ class MotherAgent:
             Log("No description found for anime aid " + aid)
             return None
 
+        currentPart = int(animeDesc.dataDict['current_part'])
+        maxParts = int(animeDesc.dataDict['max_parts'])
+
+        if (maxParts - currentPart) > 1:
+            desc = desc + self.getDescription(connection, aid, part + 1)
+
+        # We only want to clean up once we've finished fetching the show desc.
+        if part != 0:
+            return desc
+
         desc = animeDesc.dataDict["description"]
         desc = desc.replace("<br />", "\n").replace("`", "'")
         desc = self.decodeString(desc)
@@ -189,12 +199,6 @@ class MotherAgent:
             lines.append(line)
 
         desc = "\n".join(lines).strip("\n")
-
-        currentPart = int(animeDesc.dataDict['current_part'])
-        maxParts = int(animeDesc.dataDict['max_parts'])
-
-        if (maxParts - currentPart) > 1:
-            desc = desc + self.getDescription(connection, aid, part + 1)
 
         return desc
 

@@ -169,6 +169,7 @@ class MotherAgent:
             Log("No description found for anime aid " + aid)
             return None
 
+        desc = animeDesc.dataDict["description"]
         currentPart = int(animeDesc.dataDict['current_part'])
         maxParts = int(animeDesc.dataDict['max_parts'])
 
@@ -179,7 +180,6 @@ class MotherAgent:
         if part != 0:
             return desc
 
-        desc = animeDesc.dataDict["description"]
         desc = desc.replace("<br />", "\n").replace("`", "'")
         desc = self.decodeString(desc)
 

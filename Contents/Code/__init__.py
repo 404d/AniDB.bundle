@@ -266,10 +266,12 @@ class MotherAgent:
             metadata.originally_available_at = self.getDate(
                 anime.dataDict['air_date'])
 
-            if "tag_name_list" in anime.dataDict:
+            if "tag_name_list" in anime.dataDict and \
+                    anime.dataDict["tag_name_list"]:
                 min_weight = int(float(Prefs["tag_min_weight"]) * 200)
                 weights = anime.dataDict["tag_weight_list"].split(",")
                 genres = anime.dataDict["tag_name_list"].split(",")
+
                 # Can't assign containers in Plex API
                 for (genre, weight) in zip(genres, weights):
                     if int(weight) >= min_weight:

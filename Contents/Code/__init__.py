@@ -236,6 +236,7 @@ class MotherAgent:
                            paramsA=["epno", "english_name", "kanji_name",
                                     "romaji_name", "year", "picname", "url",
                                     "rating", "episodes",
+                                    "tag_weight_list", "tag_name_list",
                                     "highest_episode_number", "air_date"])
         try:
             anime.load_data()
@@ -264,6 +265,19 @@ class MotherAgent:
 
             metadata.originally_available_at = self.getDate(
                 anime.dataDict['air_date'])
+
+            if "tag_name_list" in anime.dataDict:
+                min_weight = int(float(Prefs["tag_min_weight"]) * 200)
+                weights = anime.dataDict["tag_weight_list"].split(",")
+                genres = anime.dataDict["tag_name_list"].split(",")
+                # Can't assign containers in Plex API
+                for (genre, weight) in zip(genres, weights):
+                    if int(weight) >= min_weight:
+                        metadata.genres.add(genre)
+                    else:
+                        Log("Skipping tag '%s': Weight is %i, minimum "
+                            "weight is %i."
+                            % (genre, int(weight), min_weight))
 
             if "picname" in anime.dataDict:
                 picUrl = ANIDB_PIC_URL_BASE + anime.dataDict['picname']

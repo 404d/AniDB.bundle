@@ -25,6 +25,21 @@
         "default": "English"
     },
     {
+        "id": "tag_min_weight",
+        "label": "Minimum tag weight (in stars)",
+        "type": "enum",
+        "values": [
+            0,
+            0.5,
+            1,
+            1.5,
+            2,
+            2.5,
+            3
+        ],
+        "default": 0.5
+    },
+    {
         "id": "danger1",
         "label": "DO NOT ENABLE ANYTHING UNDER HERE IF YOU DO NOT KNOW WHAT THIS DOES",
         "type": "text",

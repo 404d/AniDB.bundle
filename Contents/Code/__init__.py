@@ -61,6 +61,20 @@ def titleKey():
     return LANGUAGE_MAP[titlePref]
 
 
+def sortKey():
+    """Utility method for finding the key name of the currently user-selected
+    language that should be used for loading sort title for show and episode
+    names."""
+    sortPref = Prefs["title_sort_lang"]
+
+    if sortPref == "---":
+        # The title key has already been looked up in the language map, so
+        # just gonna return that.
+        return titleKey()
+
+    return LANGUAGE_MAP[sortPref]
+
+
 def checkConnection():
     """Plugin agent for managing the API session."""
     global LAST_ACCESS
@@ -208,7 +222,7 @@ class MotherAgent:
         """
 
         for name in names:
-            if name in dictionary and len(dictionary[name]) > 0:
+            if name in dictionary and dictionary[name]:
                 return dictionary[name]
 
         return None
@@ -217,6 +231,16 @@ class MotherAgent:
         """Return a datetime-object initialized with the given Unix timestamp.
         """
         return datetime.fromtimestamp(int(timestampString))
+
+    def getTitles(self, metadata):
+        """Return the title and sort title for a given object based on user
+        settings and fallback rules."""
+        fallback = ["english_name", "romaji_name", "kanji_name"]
+        title = self.getValueWithFallbacks(metadata, titleKey(), *fallback)
+        sort = self.getValueWithFallbacks(metadata, sortKey(), *fallback)
+
+        return (title, sort)
+
 
     def getAnimeInfo(self, connection, aid, metadata, movie=False,
                      force=False):
@@ -252,15 +276,7 @@ class MotherAgent:
         if "rating" in anime.dataDict:
             metadata.rating = float(anime.dataDict['rating']) / 100
 
-        metadata.title = self.getValueWithFallbacks(anime.dataDict,
-                                                    titleKey(),
-                                                    'english_name',
-                                                    'romaji_name',
-                                                    'kanji_name')
-        metadata.title_sort = self.getValueWithFallbacks(anime.dataDict,
-                                                            'romaji_name',
-                                                            titleKey(),
-                                                            'kanji_name')
+        (metadata.title, metadata.title_sort) = self.getTitles(anime.dataDict)
 
         metadata.originally_available_at = self.getDate(
             anime.dataDict['air_date'])
@@ -362,9 +378,7 @@ class MotherAgent:
 
         aid = fileInfo.dataDict['aid']
 
-        name = self.getValueWithFallbacks(fileInfo.dataDict, titleKey(),
-                                          'english_name', 'romaji_name',
-                                          'kanji_name')
+        name = self.getTitles(fileInfo.dataDict)
 
         year = str(fileInfo.dataDict['year'])
         if year.find('-') > -1:
@@ -375,6 +389,19 @@ class MotherAgent:
         results.Append(MetadataSearchResult(id=str(aid), name=name,
                                             year=int(year), score=100,
                                             lang=Locale.Language.English))
+
+    def getEpisodeFromCache(self, episodeKey):
+        keys = ["english_name", "romaji_name", "kanji_name", "length",
+                "rating", "aired"]
+
+        episode = {}
+        for key in keys:
+            if (episodeKey + key) in Dict:
+                episode[key] = Dict[episodeKey + key]
+            else:
+                episode[key] = None
+
+        return episode
 
 
 class AniDBAgentMovies(Agent.Movies, MotherAgent):
@@ -455,17 +482,14 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
                                               force)
 
                 episode = metadata.seasons[s].episodes[ep]
-                episode.title = Dict[episodeKey + "title"]
+                episodeData = self.getEpisodeFromCache(episodeKey)
 
-                if str(episodeKey + "rating") in Dict:
-                    episode.rating = Dict[episodeKey + "rating"]
-
-                if str(episodeKey + "length") in Dict:
-                    episode.duration = Dict[episodeKey + "length"]
-
-                if str(episodeKey + "aired") in Dict:
-                    aired = Dict[episodeKey + "aired"]
-                    episode.originally_available_at = aired
+                episode.title = self.getTitles(episodeData)[0]
+                # Doesn't seem like EpisodeObject actually has a title_sort
+                # attribute? Need to look into this.
+                episode.rating = episodeData["rating"]
+                episode.duration = episodeData["length"]
+                episode.originally_available_at = episodeData["aired"]
 
     def loadEpisode(self, connection, metadata, season, episode, force):
 
@@ -498,9 +522,9 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
             Log("Could not load episode info, msg: " + str(e))
             raise e
 
-        Dict[episodeKey + "title"] = self.getValueWithFallbacks(
-            episode.dataDict, titleKey(), 'english_name', 'romaji_name',
-            'kanji_name')
+        Dict[episodeKey + "english_name"] = episode.dataDict["english_name"]
+        Dict[episodeKey + "romaji_name"] = episode.dataDict["romaji_name"]
+        Dict[episodeKey + "kanji_name"] = episode.dataDict["kanji_name"]
 
         if "rating" in episode.dataDict:
             rating = float(episode.dataDict['rating']) / 100

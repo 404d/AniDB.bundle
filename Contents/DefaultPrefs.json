@@ -25,6 +25,18 @@
         "default": "English"
     },
     {
+        "id": "title_sort_lang",
+        "label": "Title sort language",
+        "type": "enum",
+        "values": [
+            "---",
+            "English",
+            "Kanji",
+            "Romaji"
+        ],
+        "default": "---"
+    },
+    {
         "id": "tag_min_weight",
         "label": "Minimum tag weight (in stars)",
         "type": "enum",

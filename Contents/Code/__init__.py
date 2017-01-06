@@ -238,64 +238,54 @@ class MotherAgent:
                                     "rating", "episodes",
                                     "tag_weight_list", "tag_name_list",
                                     "highest_episode_number", "air_date"])
-        try:
-            anime.load_data()
-        except Exception, e:
-            Log("Could not load anime info, msg: " + str(e))
-            raise e
+        anime.load_data()
 
-        try:
-            if movie and "year" in anime.dataDict:
-                year = str(anime.dataDict['year'])
-                if year.find('-') > -1:
-                    year = year[:year.find('-')]
-                try:
-                    metadata.year = int(year)
-                except:
-                    pass
+        if movie and "year" in anime.dataDict:
+            year = str(anime.dataDict['year'])
+            if year.find('-') > -1:
+                year = year[:year.find('-')]
+            try:
+                metadata.year = int(year)
+            except:
+                pass
 
-            if "rating" in anime.dataDict:
-                metadata.rating = float(anime.dataDict['rating']) / 100
+        if "rating" in anime.dataDict:
+            metadata.rating = float(anime.dataDict['rating']) / 100
 
-            metadata.title = self.getValueWithFallbacks(anime.dataDict,
-                                                        titleKey(),
-                                                        'english_name',
-                                                        'romaji_name',
-                                                        'kanji_name')
+        metadata.title = self.getValueWithFallbacks(anime.dataDict,
+                                                    titleKey(),
+                                                    'english_name',
+                                                    'romaji_name',
+                                                    'kanji_name')
+        metadata.title_sort = self.getValueWithFallbacks(anime.dataDict,
+                                                            'romaji_name',
+                                                            titleKey(),
+                                                            'kanji_name')
 
-            metadata.originally_available_at = self.getDate(
-                anime.dataDict['air_date'])
+        metadata.originally_available_at = self.getDate(
+            anime.dataDict['air_date'])
 
-            if "tag_name_list" in anime.dataDict and \
-                    anime.dataDict["tag_name_list"]:
-                min_weight = int(float(Prefs["tag_min_weight"]) * 200)
-                weights = anime.dataDict["tag_weight_list"].split(",")
-                genres = anime.dataDict["tag_name_list"].split(",")
+        if "tag_name_list" in anime.dataDict and \
+                anime.dataDict["tag_name_list"]:
+            min_weight = int(float(Prefs["tag_min_weight"]) * 200)
+            weights = anime.dataDict["tag_weight_list"].split(",")
+            genres = anime.dataDict["tag_name_list"].split(",")
 
-                # Can't assign containers in Plex API
-                for (genre, weight) in zip(genres, weights):
-                    if int(weight) >= min_weight:
-                        metadata.genres.add(genre)
-                    else:
-                        Log("Skipping tag '%s': Weight is %i, minimum "
-                            "weight is %i."
-                            % (genre, int(weight), min_weight))
+            # Can't assign containers in Plex API
+            for (genre, weight) in zip(genres, weights):
+                if int(weight) >= min_weight:
+                    metadata.genres.add(genre)
+                else:
+                    Log("Skipping tag '%s': Weight is %i, minimum "
+                        "weight is %i."
+                        % (genre, int(weight), min_weight))
 
-            if "picname" in anime.dataDict:
-                picUrl = ANIDB_PIC_URL_BASE + anime.dataDict['picname']
-                poster = Proxy.Media(HTTP.Request(picUrl).content)
-                metadata.posters[picUrl] = poster
+        if "picname" in anime.dataDict:
+            picUrl = ANIDB_PIC_URL_BASE + anime.dataDict['picname']
+            poster = Proxy.Media(HTTP.Request(picUrl).content)
+            metadata.posters[picUrl] = poster
 
-        except Exception, e:
-            Log("Could not set anime metadata, msg: " + str(e))
-            raise e
-
-        try:
-            metadata.summary = self.getDescription(connection, metadata.id, 0)
-        except Exception, e:
-            sys.excepthook(*sys.exc_info())
-            Log("Could not load description, msg: " + str(e))
-            raise e
+        metadata.summary = self.getDescription(connection, metadata.id, 0)
 
     def doHashSearch(self, results, filename, connection):
         """Return an AniDB file entry, given the path to a local file."""

@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 if None:
     from nonexistent import HTTP, Prefs, Thread, Proxy, MetadataSearchResult  # NOQA
     from nonexistent import Locale, Agent, Dict
@@ -485,8 +486,6 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
                 episodeData = self.getEpisodeFromCache(episodeKey)
 
                 episode.title = self.getTitles(episodeData)[0]
-                # Doesn't seem like EpisodeObject actually has a title_sort
-                # attribute? Need to look into this.
                 episode.rating = episodeData["rating"]
                 episode.duration = episodeData["length"]
                 episode.originally_available_at = episodeData["aired"]

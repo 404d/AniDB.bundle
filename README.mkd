@@ -1,3 +1,31 @@
 Fixing this shit is going to be the end of me
 
 [![Code Health](https://landscape.io/github/404d/AniDB.bundle/master/landscape.svg?style=flat)](https://landscape.io/github/404d/AniDB.bundle/master)
+
+# Notes to self
+- Codebase
+    1. Currently, `ANIME` data does not get cached *at all*. This must be fixed.
+    2. Episode caching is done using one massive dictionary with keys like
+       `aid-1234-04length` or something like that. Check whether it's possible
+       to store dictionaries inside `Dict`, *then do it*.
+    3. jesus fuck I need to just trash the entirety of adba, but I need to make
+       a mock UDP server for testing against first.
+- Plex API
+    1. Record objects does not support setting the Sort Title value. This means
+       things like episodes can't have a sort title set through the agent, but
+       TV Shows etc. can.
+        - You can hack the attribute into the models mentioned below, but even
+          though you won't get any more exceptions it will not set the field.
+    2. Plenty of info about the object models in
+       `/opt/pms/.../Framework.bundle/Contents/Resources/Versions/2/Models/Metadata`.
+    3. Haven't found out how to set up collections through an agent, seen rumours
+       that it isn't possible.
+- UDP API
+    1. No ways to get episode synopsis yet.
+    2. `ANIME` can return a tag ID list instead of tag name list, this can be
+       used for `TAG` lookups and will hopefully let me dig up more stuff like
+       the tag family tree and the like.
+    3. It's possible to look up `CREATOR` info using the API, but I haven't seen
+       a way to actually get the anime-creator relationships yet.
+    4. Unknown whether it's possible to get the "summary episode" flag through
+       the API or not.

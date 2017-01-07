@@ -12,6 +12,7 @@ import adba
 import urllib
 import threading
 import traceback
+import re
 import sys
 from datetime import datetime, timedelta
 
@@ -203,12 +204,14 @@ class MotherAgent:
         for line in desc.split("\n"):
             # Remove info-lines
             patterns = [
-                "*",
-                "Note: ",
-                "Source: ",
+                lambda x: x.startswith("*"),
+                lambda x: re.match("^Note( \d+)?:", x),
+                lambda x: x.startswith("Source: "),
+                lambda x: x.startswith(u"— written by"),
+                lambda x: x.startswith("~ translated"),
             ]
 
-            if [True for pattern in patterns if line.startswith(pattern)]:
+            if [True for pattern in patterns if pattern(line)]:
                 continue
 
             lines.append(line)

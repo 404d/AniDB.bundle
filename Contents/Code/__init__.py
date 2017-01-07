@@ -382,7 +382,7 @@ class MotherAgent:
 
         aid = fileInfo.dataDict['aid']
 
-        name = self.getTitles(fileInfo.dataDict)
+        name = self.getTitles(fileInfo.dataDict)[0]
 
         year = str(fileInfo.dataDict['year'])
         if year.find('-') > -1:

@@ -503,9 +503,9 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
                       + str(episode) + "-")
 
         Log("Force: " + str(force))
-        Log("Has key: " + str(str(episodeKey + "title") in Dict))
+        Log("Has key: " + str(str(episodeKey + "kanji_name") in Dict))
 
-        if str(episodeKey + "title") in Dict and not force:
+        if str(episodeKey + "kanji_name") in Dict and not force:
             Log("Metadata for '" + metadata.title + "', season " + season +
                 " episode " + epno + " found in cache")
             return episodeKey

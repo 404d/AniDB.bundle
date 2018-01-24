@@ -524,9 +524,12 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
             Log("Could not load episode info, msg: " + str(e))
             raise e
 
-        Dict[episodeKey + "english_name"] = episode.dataDict["english_name"]
-        Dict[episodeKey + "romaji_name"] = episode.dataDict["romaji_name"]
-        Dict[episodeKey + "kanji_name"] = episode.dataDict["kanji_name"]
+        if "english_name" in episode.dataDict:
+            Dict[episodeKey + "english_name"] = episode.dataDict["english_name"]
+        if "romaji_name" in episode.dataDict:
+            Dict[episodeKey + "romaji_name"] = episode.dataDict["romaji_name"]
+        if "kanji_name" in episode.dataDict:
+            Dict[episodeKey + "kanji_name"] = episode.dataDict["kanji_name"]
 
         if "rating" in episode.dataDict:
             rating = float(episode.dataDict['rating']) / 100

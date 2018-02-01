@@ -121,7 +121,7 @@ class MotherAgent:
                 LAST_ACCESS = datetime.now()
                 return CONNECTION
 
-            CONNECTION = adba.Connection(log=True)
+            CONNECTION = adba.Connection(log=True, keepAlive=True)
 
             Thread.CreateTimer(300, checkConnection)
 
@@ -512,6 +512,10 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
 
         Log("Loading metadata for '" + metadata.title + "', season " +
             season + " episode " + epno + " from AniDB")
+
+        if episodeKey in Dict:
+            Log("Found in cache, skipping")
+            return episodeKey
 
         episode = adba.Episode(connection, aid=metadata.id, epno=epno)
 

@@ -1888,6 +1888,21 @@ class VersionResponse(Response):
         self.coderep = ()
 
 
+class NoSuchDescriptionResponse(Response):
+    def __init__(self, cmd, restag, rescode, resstr, datalines):
+        """
+        attributes:
+
+        data:
+
+        """
+        Response.__init__(self, cmd, restag, rescode, resstr, datalines)
+        self.codestr = 'NO_SUCH_DESCRIPTION'
+        self.codehead = ()
+        self.codetail = ()
+        self.coderep = ()
+
+
 responses = {
     '200': LoginAcceptedResponse,
     '201': LoginAcceptedNewVerResponse,
@@ -1956,6 +1971,7 @@ responses = {
     '330': NoSuchAnimeResponse,
     '333': NoSuchDescriptionResponse,
     '340': NoSuchEpisodeResponse,
+    '341': NoSuchDescriptionResponse,
     '345': NoSuchProducerResponse,
     '350': NoSuchGroupResponse,
     '355': BuddyAlreadyAddedResponse,

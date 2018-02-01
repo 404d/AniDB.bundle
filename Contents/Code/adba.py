@@ -172,11 +172,15 @@ class Connection(threading.Thread):
 
     def authed(self, reAuthenticate=False):
         self.lock.acquire()
-        authed = not self.link.session
+        authed = self.link.session is not None
 
         if not authed and (reAuthenticate or self.keepAlive):
-            self.reAuthenticate()
-            authed = not self.link.session
+            self.log("unauthed, reauthing")
+            if self.reAuthenticate():
+                self.log("reauthed")
+                authed = not self.link.session
+            else:
+                self.log("Unable to reauth: Invalid credentials")
 
         self.lock.release()
         return authed

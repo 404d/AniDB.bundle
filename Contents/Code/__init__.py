@@ -174,16 +174,27 @@ class MotherAgent:
         "Return one 1400-byte `part` of the description for AniDB anime `aid`."
 
         animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
-        try:
-            animeDesc.load_data()
-        except IndexError:
-            # This should occurr when we get status code 333
-            Log("No description found for anime aid " + aid)
-            return None
 
-        if "description" not in animeDesc.dataDict:
-            Log("No description found for anime aid " + aid)
-            return None
+        cacheKey = "aid:%s:desc" % aid
+        if cacheKey not in Dict:
+            Log("Cache miss for key %s" % cacheKey)
+
+            try:
+                animeDesc.load_data()
+            except IndexError:
+                # This should occurr when we get status code 333
+                Log("No description found for anime aid " + aid)
+                return None
+
+            if "description" not in animeDesc.dataDict:
+                Log("No description found for anime aid " + aid)
+                return None
+
+            Dict[cacheKey] = animeDesc.dataDict
+
+        else:
+            Log("Loading desc from cache key %s" % cacheKey)
+            animeDesc.dataDict = Dict[cacheKey]
 
         desc = animeDesc.dataDict["description"]
         currentPart = int(animeDesc.dataDict['current_part'])
@@ -266,7 +277,19 @@ class MotherAgent:
                                     "rating", "episodes",
                                     "tag_weight_list", "tag_name_list",
                                     "highest_episode_number", "air_date"])
-        anime.load_data()
+
+        cacheKey = "aid:%s" % metadata.id
+        if cacheKey not in Dict or force:
+            Log("Cache miss for key %s" % cacheKey)
+            anime.load_data()
+            Dict[cacheKey] = anime.dataDict
+
+            if cacheKey + ":desc" in Dict:
+                Log("Cleaning up key %s:desc" % cacheKey)
+                del Dict[cacheKey + ":desc"]
+        else:
+            Log("Loading anime info from cache key %s" % cacheKey)
+            anime.dataDict = Dict[cacheKey]
 
         if movie and "year" in anime.dataDict:
             year = str(anime.dataDict['year'])

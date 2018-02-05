@@ -176,25 +176,26 @@ class MotherAgent:
         animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
 
         cacheKey = "aid:%s:desc" % aid
-        if cacheKey not in Dict:
-            Log("Cache miss for key %s" % cacheKey)
+        if part == 0:
+            if cacheKey not in Dict:
+                Log("Cache miss for key %s" % cacheKey)
 
-            try:
-                animeDesc.load_data()
-            except IndexError:
-                # This should occurr when we get status code 333
-                Log("No description found for anime aid " + aid)
-                return None
+                try:
+                    animeDesc.load_data()
+                except IndexError:
+                    # This should occurr when we get status code 333
+                    Log("No description found for anime aid " + aid)
+                    return None
 
-            if "description" not in animeDesc.dataDict:
-                Log("No description found for anime aid " + aid)
-                return None
+                if "description" not in animeDesc.dataDict:
+                    Log("No description found for anime aid " + aid)
+                    return None
 
-            Dict[cacheKey] = animeDesc.dataDict
+                Dict[cacheKey] = animeDesc.dataDict
 
-        else:
-            Log("Loading desc from cache key %s" % cacheKey)
-            animeDesc.dataDict = Dict[cacheKey]
+            else:
+                Log("Loading desc from cache key %s" % cacheKey)
+                animeDesc.dataDict = Dict[cacheKey]
 
         desc = animeDesc.dataDict["description"]
         currentPart = int(animeDesc.dataDict['current_part'])

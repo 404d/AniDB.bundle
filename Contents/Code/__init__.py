@@ -176,7 +176,8 @@ class MotherAgent:
         animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
 
         cacheKey = "aid:%s:desc" % aid
-        if part == 0 and cacheKey in Dict:
+        if part == 0 and cacheKey in Dict \
+                and not isinstance(Dict[cacheKey], dict):
             Log("Loading desc from cache key %s" % cacheKey)
             return Dict[cacheKey]
 

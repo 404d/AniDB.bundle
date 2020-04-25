@@ -4,7 +4,6 @@ Fixing this shit is going to be the end of me
 
 # Notes to self
 - Codebase
-    1. Currently, `ANIME` data does not get cached *at all*. This must be fixed.
     2. Episode caching is done using one massive dictionary with keys like
        `aid-1234-04length` or something like that. Check whether it's possible
        to store dictionaries inside `Dict`, *then do it*.

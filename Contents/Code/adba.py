@@ -26,6 +26,7 @@ import types
 from aniDBlink import AniDBLink
 from aniDBerrors import AniDBCommandTimeoutError
 from aniDBAbstracter import Anime, AnimeDesc, Episode, File  # NOQA
+from datetime import datetime
 
 
 class adb(object):
@@ -36,6 +37,8 @@ version = 100
 
 
 class Connection(threading.Thread):
+    ban_cooldown = None
+
     def __init__(self, clientname='adba', server='api.anidb.info', port=9000,
                  myport=9876, user=None, password=None, session=None,
                  log=False, logPrivate=False, keepAlive=False):
@@ -132,6 +135,7 @@ class Connection(threading.Thread):
             self.counterAge = time()
             self.counter = self.counter + 1
             if self.keepAlive:
+                self.log("Keepalive authcheck in handle")
                 self.authed()
 
         def callback_wrapper(resp):
@@ -170,9 +174,20 @@ class Connection(threading.Thread):
         else:
             self.lock.release()
 
+    @property
+    def ban_cooldown_active(self):
+        if not self.ban_cooldown:
+            return False
+
+        return datetime.utcnow() < self.ban_cooldown
+
     def authed(self, reAuthenticate=False):
         self.lock.acquire()
         authed = self.link.session is not None
+
+        if self.link and self.link.banned:
+            self.log("banned, won't auth")
+            return False
 
         if not authed and (reAuthenticate or self.keepAlive):
             self.log("unauthed, reauthing")

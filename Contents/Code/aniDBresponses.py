@@ -25,6 +25,7 @@ class ResponseResolver(object):
         self.datalines = datalines
 
     def parse(self, data):
+        data = data.replace("`", "'")  # "Unescape"
         resline = data.split('\n', -1)[0]
         lines = data.split('\n')[1:-1]
 
@@ -42,6 +43,8 @@ class ResponseResolver(object):
         return restag, rescode, resstr, datalines
 
     def resolve(self, cmd):
+        Log(repr(self.rescode))
+
         return responses[self.rescode](cmd, self.restag, self.rescode,
                                        self.resstr, self.datalines)
 

@@ -124,8 +124,10 @@ class AniDBLink(threading.Thread):
                         "packet failed"
                     )
                 cmd = self.cmd_dequeue(resp)
+                Log(repr(cmd))
                 resp = resp.resolve(cmd)
                 resp.parse()
+                Log(repr(resp))
                 if resp.rescode in ('200', '201'):
                     self.session = resp.attrs['sesskey']
                 if resp.rescode in ('209',):

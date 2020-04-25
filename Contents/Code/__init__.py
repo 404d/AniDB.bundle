@@ -18,12 +18,15 @@ from datetime import datetime, timedelta
 
 ANIDB_PIC_URL_BASE = "http://img7.anidb.net/pics/anime/"
 
-IDLE_TIMEOUT = timedelta(seconds=60 * 5)
+IDLE_TIMEOUT = timedelta(seconds=60 * 30)
 
 LOCK = threading.RLock()
 
 CONNECTION = None
 LAST_ACCESS = None
+LAST_COOLDOWN = None
+INITIAL_COOLDOWN = timedelta(hours=1)
+COOLDOWN_CAP = timedelta(hours=48)
 
 LANGUAGE_MAP = dict()
 
@@ -87,7 +90,8 @@ def checkConnection():
     LOCK.acquire()
     try:
         if CONNECTION is not None and LAST_ACCESS is not None \
-                and (datetime.now() - IDLE_TIMEOUT) > LAST_ACCESS:
+                and (datetime.now() - IDLE_TIMEOUT) > LAST_ACCESS \
+                and not CONNECTION.banned:
             CONNECTION.stop()
             CONNECTION = None
             Log("Connection timeout reached. Closing connection!")
@@ -100,47 +104,87 @@ def checkConnection():
         Thread.CreateTimer(300, checkConnection)
 
 
+def callStack():
+    for line in traceback.format_stack():
+        Log(line.strip())
+
+
 class MotherAgent:
     "Base metadata agent with utility functions for loading data from AniDB."
 
-    def connect(self):
+    @property
+    def connection(self):
         "Create an API session and authenticate with the stored credentials."
 
         global CONNECTION
         global LAST_ACCESS
+        global LAST_COOLDOWN
 
         try:
             username = Prefs["username"]
             password = Prefs["password"]
 
             if CONNECTION is not None:
-                if not CONNECTION.authed():
+                # Take care of ban handling
+                if self.is_banned:
+                    # Initialize the cooldown timer if neccessary
+                    if not CONNECTION.ban_cooldown:
+                        # Set cooldown
+                        if LAST_COOLDOWN:
+                            LAST_COOLDOWN = LAST_COOLDOWN * 2
+                        else:
+                            LAST_COOLDOWN = INITIAL_COOLDOWN
+
+                        # Constrain the max cooldown time
+                        if LAST_COOLDOWN > COOLDOWN_CAP:
+                            LAST_COOLDOWN = COOLDOWN_CAP
+
+                        Log("Ban cooldown: %r" % LAST_COOLDOWN)
+                        CONNECTION.ban_cooldown = datetime.utcnow() + LAST_COOLDOWN
+                        Log("Ban cooldown expires on %r" % CONNECTION.ban_cooldown)
+
+                    # Clear ban timer if cooldown is over
+                    if not CONNECTION.ban_cooldown_active:
+                        Log("Banned but cooldown over, clearing ban state")
+                        CONNECTION.link.banned = False
+
+                # Perform connection
+                if not self.is_banned and not CONNECTION.authed():
+                    Log("Authenticating")
                     CONNECTION.auth(username, password)
 
-                Log("Reusing authenticated connection")
-                LAST_ACCESS = datetime.now()
+                elif self.is_banned:
+                    Log("Banned, will return current connection")
+
+                else:
+                    Log("Reusing authenticated connection")
+                    LAST_ACCESS = datetime.now()
+
                 return CONNECTION
 
             CONNECTION = adba.Connection(log=True, keepAlive=True)
 
-            Thread.CreateTimer(300, checkConnection)
+            Thread.CreateTimer(60, checkConnection)
 
             if not username or not password:
-                    Log("Set username and password!")
-                    return None
+                    raise Exception("Set username and password!")
 
             CONNECTION.auth(username, password)
             Log("Auth ok!")
 
         except Exception:
             Log("Connection exception, traceback:")
-            Log("".join(traceback.format_exception(sys.exc_type,
-                                                   sys.exc_value,
-                                                   sys.exc_traceback)))
-            raise Exception("See INFO-level message above for traceback")
+            Log("".join(traceback.format_exception(*sys.exc_info())))
 
         LAST_ACCESS = datetime.now()
         return CONNECTION
+
+    @property
+    def is_banned(self):
+        if CONNECTION and CONNECTION.link:
+            return CONNECTION.link.banned
+
+        return False
 
     def decodeString(self, string=None):
         """"Decode" and return the given string.
@@ -170,10 +214,11 @@ class MotherAgent:
 
         return string
 
-    def getDescription(self, connection, aid, part):
+    def getDescription(self, aid, part):
         "Return one 1400-byte `part` of the description for AniDB anime `aid`."
 
-        animeDesc = adba.AnimeDesc(connection, aid=aid, part=part)
+        Log("Description stuff")
+        animeDesc = adba.AnimeDesc(self.connection, aid=aid, part=part)
 
         cacheKey = "aid:%s:desc" % aid
         if part == 0 and cacheKey in Dict \
@@ -182,6 +227,12 @@ class MotherAgent:
             return Dict[cacheKey]
 
         Log("Cache miss for key %s" % cacheKey)
+
+        if self.is_banned:
+            Log("Banned from the API and with no cache, returning no desc data")
+            return None
+
+        Log("Loading desc from API for key %s" % cacheKey)
 
         try:
             animeDesc.load_data()
@@ -199,11 +250,15 @@ class MotherAgent:
         maxParts = int(animeDesc.dataDict['max_parts'])
 
         if (maxParts - currentPart) > 1:
-            desc = desc + self.getDescription(connection, aid, part + 1)
+            desc = desc + self.getDescription(aid, part + 1)
 
         # We only want to clean up once we've finished fetching the show desc.
         if part != 0:
             return desc
+
+        # FIXME: I fucked up cache, should be unfucked then remove this
+        if isinstance(desc, list):
+            desc = "'".join(desc)
 
         desc = desc.replace("<br />", "\n").replace("`", "'")
         desc = self.decodeString(desc)
@@ -254,10 +309,23 @@ class MotherAgent:
         title = self.getValueWithFallbacks(metadata, titleKey(), *fallback)
         sort = self.getValueWithFallbacks(metadata, sortKey(), *fallback)
 
+        # FIXME: Handle fuck-ups in which apostrophes were cached and will fuck up cache lookups due to auto splitting lists
+        if isinstance(title, list):
+            title = "'".join(title)
+
+        if isinstance(sort, list):
+            sort = "'".join(sort)
+
+        # "Unescape"
+        # There's few enough cases of legitimate use of ` in titles that I
+        # don't care this ain't gonna be accurate.
+        title = title.replace("`", "'")
+        sort = sort.replace("`", "'")
+
         return (title, sort)
 
 
-    def getAnimeInfo(self, connection, aid, metadata, movie=False,
+    def getAnimeInfo(self, aid, metadata, movie=False,
                      force=False):
         """Return a Plex metadata instance for the AniDB anime `aid`.
 
@@ -271,18 +339,24 @@ class MotherAgent:
 
         Log("Loading metadata for anime aid " + aid)
 
-        anime = adba.Anime(connection, aid=metadata.id,
+        anime = adba.Anime(self.connection, aid=metadata.id,
                            paramsA=["epno", "english_name", "kanji_name",
-                                    "romaji_name", "year", "picname", "url",
-                                    "rating", "episodes",
+                                    "romaji_name", "other_name", "year",
+                                    "picname", "url", "rating", "episodes",
                                     "tag_weight_list", "tag_name_list",
                                     "highest_episode_number", "air_date"])
 
         cacheKey = "aid:%s" % metadata.id
         if cacheKey not in Dict or force:
             Log("Cache miss for key %s" % cacheKey)
+
+            if self.is_banned:
+                Log("Banned from the API and with no cache, returning no anime data")
+                return None
+
             anime.load_data()
             Dict[cacheKey] = anime.dataDict
+            Log("Anime dump: %r" % (anime.dataDict, ))
 
             if cacheKey + ":desc" in Dict:
                 Log("Cleaning up key %s:desc" % cacheKey)
@@ -311,8 +385,17 @@ class MotherAgent:
         if "tag_name_list" in anime.dataDict and \
                 anime.dataDict["tag_name_list"]:
             min_weight = int(float(Prefs["tag_min_weight"]) * 200)
-            weights = anime.dataDict["tag_weight_list"].split(",")
-            genres = anime.dataDict["tag_name_list"].split(",")
+            # Cast to str since adba type handling is shit
+            # If the response field can be parsed as an int, it'll be parsed
+            # as an int
+            # This breaks one element tag lists
+            weights = str(anime.dataDict["tag_weight_list"]).split(",")
+            genres = anime.dataDict["tag_name_list"]
+
+            if not isinstance(anime.dataDict["tag_name_list"], list):
+                genres = genres.split(",")
+
+            Log(repr(genres))
 
             # Can't assign containers in Plex API
             for (genre, weight) in zip(genres, weights):
@@ -328,16 +411,20 @@ class MotherAgent:
             poster = Proxy.Media(HTTP.Request(picUrl).content)
             metadata.posters[picUrl] = poster
 
-        metadata.summary = self.getDescription(connection, metadata.id, 0)
+        metadata.summary = self.getDescription(metadata.id, 0)
 
-    def doHashSearch(self, results, filename, connection):
+    def doHashSearch(self, results, filename):
         """Return an AniDB file entry, given the path to a local file."""
 
         filePath = urllib.unquote(filename)
 
-        fileInfo = adba.File(connection, filePath=filePath, paramsF=["aid"],
+        fileInfo = adba.File(self.connection, filePath=filePath, paramsF=["aid"],
                              paramsA=["english_name", "romaji_name",
                                       "kanji_name", "year"])
+
+        if self.is_banned:
+            Log("Banned from the API and with no cache, returning no hash search data")
+            return None
 
         try:
             Log("Trying to lookup %s by file on anidb" % filePath)
@@ -347,14 +434,20 @@ class MotherAgent:
 
         return fileInfo
 
-    def doNameSearch(self, results, name, connection):
+    def doNameSearch(self, results, name):
         """Return an AniDB anime entry, given a search string for the name
         field.
         """
 
-        fileInfo = adba.Anime(connection, name=name,
+        fileInfo = adba.Anime(self.connection, name=name,
                               paramsA=["english_name", "kanji_name",
-                                       "romaji_name", "year", "aid"])
+                                       "romaji_name", "other_name", "year",
+                                       "aid"])
+
+        if self.is_banned:
+            Log("Banned from the API and with no cache, returning no name search data")
+            return None
+
         try:
             Log("Trying to lookup %s by name on anidb" % name)
             fileInfo.load_data()
@@ -372,15 +465,10 @@ class MotherAgent:
         supposed to push our result objects. Not very pythonic, or amirite
         """
 
-        connection = self.connect()
-
-        if connection is None:
-            return
-
         fileInfo = None
 
         if media.filename is not None:
-            fileInfo = self.doHashSearch(results, media.filename, connection)
+            fileInfo = self.doHashSearch(results, media.filename)
 
         if not fileInfo or (
                 "aid" not in fileInfo.dataDict and (media.name or media.show)):
@@ -397,7 +485,7 @@ class MotherAgent:
                 results.Append(result)
                 return
 
-            fileInfo = self.doNameSearch(results, metaName, connection)
+            fileInfo = self.doNameSearch(results, metaName)
 
         if "aid" not in fileInfo.dataDict:
             Log("No match found or error occurred!")
@@ -457,11 +545,7 @@ class AniDBAgentMovies(Agent.Movies, MotherAgent):
         self.doUpdate(metadata, media, lang, force)
 
     def doUpdate(self, metadata, media, lang, force):
-        connection = self.connect()
-        if not connection:
-            return
-
-        self.getAnimeInfo(connection, metadata.id, metadata, True, force)
+        self.getAnimeInfo(metadata.id, metadata, True, force)
 
 
 class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
@@ -490,12 +574,7 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
         self.doUpdate(metadata, media, lang, force)
 
     def doUpdate(self, metadata, media, lang, force):
-
-        connection = self.connect()
-        if not connection:
-            return
-
-        self.getAnimeInfo(connection, metadata.id, metadata, False, force)
+        self.getAnimeInfo(metadata.id, metadata, False, force)
 
         for s in media.seasons:
 
@@ -505,8 +584,10 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
 
             for ep in media.seasons[s].episodes:
 
-                episodeKey = self.loadEpisode(connection, metadata, s, ep,
-                                              force)
+                episodeKey = self.loadEpisode(metadata, s, ep, force)
+                if not episodeKey:
+                    Log("Unable to find data for season %r episode %r" %(s, ep))
+                    continue
 
                 episode = metadata.seasons[s].episodes[ep]
                 episodeData = self.getEpisodeFromCache(episodeKey)
@@ -516,7 +597,7 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
                 episode.duration = episodeData["length"]
                 episode.originally_available_at = episodeData["aired"]
 
-    def loadEpisode(self, connection, metadata, season, episode, force):
+    def loadEpisode(self, metadata, season, episode, force):
 
         epno = episode
         if str(season) == "0":
@@ -540,7 +621,11 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
             Log("Found in cache, skipping")
             return episodeKey
 
-        episode = adba.Episode(connection, aid=metadata.id, epno=epno)
+        if self.is_banned:
+            Log("Banned from the API and with no cache, returning no episode data for %r" % episodeKey)
+            return None
+
+        episode = adba.Episode(self.connection, aid=metadata.id, epno=epno)
 
         try:
             episode.load_data()
@@ -551,12 +636,19 @@ class AniDBAgentTV(Agent.TV_Shows, MotherAgent):
             Log("Could not load episode info, msg: " + str(e))
             raise e
 
+        # FIXME: Cache shit lists
         if "english_name" in episode.dataDict:
-            Dict[episodeKey + "english_name"] = episode.dataDict["english_name"]
+            if isinstance(episode.dataDict["english_name"], list):
+                episode.dataDict["english_name"] = "'".join(episode.dataDict["english_name"])
+            Dict[episodeKey + "english_name"] = episode.dataDict["english_name"].replace("`", "'")
         if "romaji_name" in episode.dataDict:
-            Dict[episodeKey + "romaji_name"] = episode.dataDict["romaji_name"]
+            if isinstance(episode.dataDict["romaji_name"], list):
+                episode.dataDict["romaji_name"] = "'".join(episode.dataDict["romaji_name"])
+            Dict[episodeKey + "romaji_name"] = episode.dataDict["romaji_name"].replace("`", "'")
         if "kanji_name" in episode.dataDict:
-            Dict[episodeKey + "kanji_name"] = episode.dataDict["kanji_name"]
+            if isinstance(episode.dataDict["kanji_name"], list):
+                episode.dataDict["kanji_name"] = "'".join(episode.dataDict["kanji_name"])
+            Dict[episodeKey + "kanji_name"] = episode.dataDict["kanji_name"].replace("`", "'")
 
         if "rating" in episode.dataDict:
             rating = float(episode.dataDict['rating']) / 100

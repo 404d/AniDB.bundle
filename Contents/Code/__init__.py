@@ -319,8 +319,13 @@ class MotherAgent:
         # "Unescape"
         # There's few enough cases of legitimate use of ` in titles that I
         # don't care this ain't gonna be accurate.
-        title = title.replace("`", "'")
-        sort = sort.replace("`", "'")
+        if title:
+            title = title.replace("`", "'")
+
+        if sort:
+            sort = sort.replace("`", "'")
+        else:
+            sort = title
 
         return (title, sort)
 

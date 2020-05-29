@@ -214,7 +214,7 @@ class AniDBLink(threading.Thread):
             return self.cmd_queue.pop(resp.restag)
 
     def get_delay(self):
-        return (self.delay < 2.1 and 2.1 or self.delay)
+        return min(self.delay, 2.1)
 
     def do_delay(self):
         age = time() - self.lastpacket

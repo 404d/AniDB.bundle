@@ -19,6 +19,8 @@ Fixing this shit is going to be the end of me
        `/opt/pms/.../Framework.bundle/Contents/Resources/Versions/2/Models/Metadata`.
     3. Haven't found out how to set up collections through an agent, seen rumours
        that it isn't possible.
+        1. Looks like it should just be the "collections" attribute on the show
+           metadata object, hum.
 - UDP API
     1. No ways to get episode synopsis yet.
     2. `ANIME` can return a tag ID list instead of tag name list, this can be

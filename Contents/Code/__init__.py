@@ -17,6 +17,7 @@ import sys
 from datetime import datetime, timedelta
 
 ANIDB_PIC_URL_BASE = "https://cdn-eu.anidb.net/images/main/"
+OLD_ANIDB_PIC_URL_BASE = "http://img7.anidb.net/pics/anime/"
 
 IDLE_TIMEOUT = timedelta(seconds=60 * 30)
 
@@ -400,10 +401,24 @@ class MotherAgent:
             if not isinstance(anime.dataDict["tag_name_list"], list):
                 genres = genres.split(",")
 
+            # Bug fix for bad '-escaping
+            elif [True for item in anime.dataDict["tag_name_list"] if u"," in item]:
+                Log("Attempting to fix bug with cached tag data being incorrectly split")
+                genres = anime.dataDict["tag_name_list"]
+                Log("Before: %r" % (genres, ))
+                genres = u"'".join(genres).split(u",")
+                Log("After: %r" % (genres, ))
+
+                Log("Looks like that worked. Saving fixed cache data")
+                anime.dataDict["tag_name_list"] = genres
+                Dict[cacheKey] = anime.dataDict
+
+
             Log(repr(genres))
 
             # Can't assign containers in Plex API
-            for (genre, weight) in zip(genres, weights):
+            metadata.genres.clear()
+            for (weight, genre) in sorted(zip(weights, genres)):
                 if int(weight) >= min_weight:
                     metadata.genres.add(genre)
                 else:
@@ -411,10 +426,32 @@ class MotherAgent:
                         "weight is %i."
                         % (genre, int(weight), min_weight))
 
+        # Replace old CDN photos
+        new_posters = {}
+        delete_posters = set()
+        for url in metadata.posters:
+            if url.startswith(OLD_ANIDB_PIC_URL_BASE):
+                Log("Updating CDN URL for %r" % url)
+                # Fix URL
+                new_url = url.replace(OLD_ANIDB_PIC_URL_BASE, ANIDB_PIC_URL_BASE)
+                # Prep data
+                delete_posters.add(url)
+                new_posters[new_url] = Proxy.Media(metadata.posters[url])
+
+        # Add new
+        for k, v in new_posters.items():
+            metadata.posters[k] = v
+
+        # Delete old
+        for url in delete_posters:
+            del metadata.posters[url]
+
         if "picname" in anime.dataDict:
             picUrl = ANIDB_PIC_URL_BASE + anime.dataDict['picname']
-            poster = Proxy.Media(HTTP.Request(picUrl).content)
-            metadata.posters[picUrl] = poster
+
+            if picUrl not in metadata.posters:
+                poster = Proxy.Media(HTTP.Request(picUrl).content)
+                metadata.posters[picUrl] = poster
 
         metadata.summary = self.getDescription(metadata.id, 0)
 
@@ -492,7 +529,7 @@ class MotherAgent:
 
             fileInfo = self.doNameSearch(results, metaName)
 
-        if "aid" not in fileInfo.dataDict:
+        if not fileInfo or "aid" not in fileInfo.dataDict:
             Log("No match found or error occurred!")
             return
 

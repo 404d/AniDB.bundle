@@ -25,7 +25,6 @@ class ResponseResolver(object):
         self.datalines = datalines
 
     def parse(self, data):
-        data = data.replace("`", "'")  # "Unescape"
         resline = data.split('\n', -1)[0]
         lines = data.split('\n')[1:-1]
 

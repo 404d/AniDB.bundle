@@ -16,7 +16,7 @@ import re
 import sys
 from datetime import datetime, timedelta
 
-ANIDB_PIC_URL_BASE = "https://https://cdn-eu.anidb.net/images/main/"
+ANIDB_PIC_URL_BASE = "https://cdn-eu.anidb.net/images/main/"
 
 IDLE_TIMEOUT = timedelta(seconds=60 * 30)
 
